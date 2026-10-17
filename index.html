@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1120">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Casa Inteligente</title>
+<link rel="manifest" id="mf">
+<link rel="icon" id="fav">
+<link rel="apple-touch-icon" id="ati">
+<style>
+:root{--bg:#0b1120;--card:#141c2f;--card2:#1b2540;--txt:#e8edf7;--mut:#8b97b3;--on:#fbbf24;--onbg:#3a2f12;--ok:#22c55e;--err:#ef4444;--acc:#3b82f6;--line:#26314d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding:env(safe-area-inset-top) 16px calc(96px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;gap:10px;padding:16px 0 8px;position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:20px;margin:0;flex:1}
+.st{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut)}
+.dot.ok{background:var(--ok)}.dot.demo{background:var(--on)}.dot.err{background:var(--err)}
+.ib{background:var(--card);border:1px solid var(--line);color:var(--txt);width:40px;height:40px;border-radius:12px;font-size:18px;display:grid;place-items:center;cursor:pointer}
+.ib.spin span{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.room{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin:14px 0}
+.rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.rh h2{font-size:16px;margin:0}.rh small{color:var(--mut);font-weight:400;margin-left:6px}
+.ed{background:none;border:none;color:var(--mut);font-size:16px;cursor:pointer;padding:6px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;color:var(--txt);cursor:pointer;transition:.2s;min-height:112px;display:flex;flex-direction:column;justify-content:space-between}
+.tile svg{width:30px;height:30px;stroke:var(--mut);fill:none;transition:.2s}
+.tile .n{font-weight:600;font-size:14px;margin-top:10px}
+.tile .s{font-size:12px;color:var(--mut);margin-top:2px}
+.tile.on{background:var(--onbg);border-color:#6b5414}
+.tile.on svg{stroke:var(--on);fill:rgba(251,191,36,.25);filter:drop-shadow(0 0 8px rgba(251,191,36,.6))}
+.tile.on .s{color:var(--on)}
+.tile.off-line{opacity:.45;cursor:not-allowed}
+.tile.busy{opacity:.7}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%)}
+.btn{width:100%;padding:14px;border-radius:14px;border:none;font-size:15px;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
+.btn.sec{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
+.btn.dan{background:transparent;border:1px solid var(--err);color:var(--err)}
+.btn+.btn{margin-top:10px}
+.welcome{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:16px 0;line-height:1.5}
+.welcome h2{margin:0 0 6px;font-size:18px}.welcome p{color:var(--mut);margin:0 0 16px;font-size:14px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.ov.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.sheet h3{margin:0 0 14px}
+label{display:block;font-size:12px;color:var(--mut);margin:12px 0 6px}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:15px}
+.hint{font-size:12px;color:var(--mut);line-height:1.5;margin-top:8px}
+.toast{position:fixed;left:16px;right:16px;bottom:90px;background:#1f2937;border:1px solid var(--line);padding:12px 14px;border-radius:12px;font-size:13px;display:none;z-index:30;line-height:1.4}
+.toast.show{display:block}.toast.err{border-color:var(--err)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 Casa Inteligente</h1>
+  <button class="ib" id="bRef" title="Atualizar"><span>⟳</span></button>
+  <button class="ib" id="bCfg" title="Configurações">⚙</button>
+</header>
+<div class="st"><span class="dot" id="dot"></span><span id="stTxt">Não conectado</span></div>
+<main id="main"></main>
+<div class="bar" id="bar" style="display:none"><button class="btn sec" id="bAllOff">🌙 Apagar tudo</button></div>
+
+<!-- Configurações -->
+<div class="ov" id="ovCfg"><div class="sheet">
+  <h3>⚙ Configurações</h3>
+  <label>App ID (eWeLink Developer)</label>
+  <input id="cAppId" autocomplete="off" placeholder="Cole o APPID aqui">
+  <label>App Secret</label>
+  <input id="cSecret" type="password" autocomplete="off" placeholder="Cole o APP SECRET aqui">
+  <label>Redirect URL</label>
+  <input id="cRedir" autocomplete="off">
+  <div class="hint">Cadastre exatamente esta Redirect URL no painel do eWeLink Developer. O App ID e o Secret ficam salvos só neste aparelho, não vão para o código do site.</div>
+  <div style="margin-top:18px">
+    <button class="btn" id="bLogin">Salvar e entrar com eWeLink</button>
+    <button class="btn sec" id="bDemo">Usar modo demonstração</button>
+    <button class="btn dan" id="bLogout">Sair da conta eWeLink</button>
+    <button class="btn sec" id="bCloseCfg">Fechar</button>
+  </div>
+</div></div>
+
+<!-- Editar interruptor -->
+<div class="ov" id="ovEd"><div class="sheet">
+  <h3>✏️ Editar interruptor</h3>
+  <label>Cômodo</label>
+  <input id="eRoom">
+  <label>Quantidade de botões (canais)</label>
+  <select id="eN"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+  <div id="eNames"></div>
+  <div class="hint">Se as luzes estiverem trocadas, é só trocar os nomes dos canais.</div>
+  <div style="margin-top:18px" class="row">
+    <button class="btn sec" id="bEdCancel">Cancelar</button>
+    <button class="btn" id="bEdSave">Salvar</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS='casaInteligente_v1';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const defRedirect=location.origin+location.pathname;
+
+let S=Object.assign({appId:'',secret:'',redirect:defRedirect,region:'us',at:'',rt:'',atExp:0,demo:false,names:{},cfg:{}},JSON.parse(localStorage.getItem(LS)||'{}'));
+const save=()=>localStorage.setItem(LS,JSON.stringify(S));
+
+const DEF_NAMES={sala:['Luz da Sala','Luz da Cozinha'],corredor:['Corredor Interno','Corredor Externo']};
+// Quantidade de canais conhecida por modelo (UIID eWeLink)
+const UIID_CH={1:1,6:1,14:1,7:2,8:3,112:1,113:2,114:3,138:1,139:2,140:3,160:1,161:2,162:3,210:1,211:2,212:3};
+
+let devices=[];
+let demoDevs=[
+  {id:'demo-sala',name:'Sala',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'on'}]},
+  {id:'demo-corredor',name:'Corredor',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'off'}]}
+];
+let loading=false,timer=null;
+
+/* ---------- utilidades ---------- */
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='toast',err?6000:2500);}
+function nonce(){const c='abcdefghijklmnopqrstuvwxyz0123456789';let s='';for(let i=0;i<8;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+async function hmac(msg){
+  const enc=new TextEncoder();
+  const k=await crypto.subtle.importKey('raw',enc.encode(S.secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const sig=await crypto.subtle.sign('HMAC',k,enc.encode(msg));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+const host=()=>`https://${S.region||'us'}-apia.coolkit.cc`;
+const logged=()=>!!(S.at&&S.appId);
+
+/* ---------- API eWeLink v2 ---------- */
+async function api(method,path,body,signed){
+  const h={'Content-Type':'application/json','X-CK-Appid':S.appId,'X-CK-Nonce':nonce()};
+  const b=body?JSON.stringify(body):undefined;
+  h.Authorization=signed?'Sign '+await hmac(b):'Bearer '+S.at;
+  let r;
+  try{r=await fetch(host()+path,{method,headers:h,body:b});}
+  catch(e){throw new Error('Não consegui falar com o eWeLink. Verifique a internet. Se persistir, o navegador pode estar bloqueando a conexão direta (CORS).');}
+  const j=await r.json().catch(()=>({error:-1,msg:'Resposta inválida do servidor'}));
+  if(j.error!==0){const e=new Error(j.msg||('Erro '+j.error));e.code=j.error;throw e;}
+  return j.data||{};
+}
+async function refreshToken(){
+  const d=await api('POST','/v2/user/refresh',{rt:S.rt});
+  S.at=d.at;S.rt=d.rt;S.atExp=Date.now()+29*864e5;save();
+}
+async function call(method,path,body){
+  if(S.atExp&&Date.now()>S.atExp-864e5){try{await refreshToken();}catch(e){}}
+  try{return await api(method,path,body);}
+  catch(e){
+    if(e.code===401||e.code===402){
+      try{await refreshToken();}catch(_){S.at='';save();render();throw new Error('Sessão expirada. Entre novamente pelo ⚙.');}
+      return await api(method,path,body);
+    }
+    throw e;
+  }
+}
+
+async function login(){
+  if(!S.appId||!S.secret){toast('Preencha App ID e App Secret.',1);return;}
+  const seq=String(Date.now());
+  const sign=await hmac(`${S.appId}_${seq}`);
+  const p=new URLSearchParams({clientId:S.appId,seq,authorization:sign,redirectUrl:S.redirect,grantType:'authorization_code',state:nonce(),nonce:nonce(),showQRCode:'false'});
+  location.href='https://c2ccdn.coolkit.cc/oauth/index.html?'+p.toString();
+}
+async function handleCallback(){
+  const q=new URLSearchParams(location.search);
+  const code=q.get('code');
+  if(!code)return;
+  history.replaceState(null,'',location.pathname);
+  S.region=q.get('region')||S.region||'us';
+  try{
+    const d=await api('POST','/v2/user/oauth/token',{code,redirectUrl:S.redirect,grantType:'authorization_code'},true);
+    S.at=d.accessToken;S.rt=d.refreshToken;S.atExp=d.atExpiredTime||Date.now()+29*864e5;S.demo=false;save();
+    toast('Conectado ao eWeLink! ✅');
+  }catch(e){toast('Falha ao entrar: '+e.message,1);}
+}
+
+/* ---------- dispositivos ---------- */
+async function loadDevices(silent){
+  if(S.demo||!logged()){render();return;}
+  if(loading)return;loading=true;$('bRef').classList.add('spin');
+  try{
+    const d=await call('GET','/v2/device/thing?num=0');
+    devices=(d.thingList||[]).filter(t=>t.itemType===1||t.itemType===2).map(t=>{
+      const it=t.itemData||{},p=it.params||{};
+      let ch=[],multi=false;
+      if(Array.isArray(p.switches)){multi=true;ch=p.switches.map(s=>({o:s.outlet,s:s.switch})).sort((a,b)=>a.o-b.o);}
+      else if(p.switch!==undefined){ch=[{o:0,s:p.switch}];}
+      return {id:it.deviceid,name:it.name||'Interruptor',online:!!it.online,multi,uiid:it.extra&&it.extra.uiid,ch};
+    }).filter(x=>x.ch.length);
+    setStatus('ok','Conectado · '+devices.length+' interruptor(es)');
+  }catch(e){setStatus('err','Erro de conexão');if(!silent)toast(e.message,1);}
+  loading=false;$('bRef').classList.remove('spin');render();
+}
+
+function roomKey(name){const n=(name||'').toLowerCase();if(n.includes('sala'))return'sala';if(n.includes('corredor'))return'corredor';return null;}
+function chCount(dev){
+  const c=S.cfg[dev.id];if(c&&c.n)return Math.min(c.n,dev.ch.length);
+  if(!dev.multi)return 1;
+  if(UIID_CH[dev.uiid])return Math.min(UIID_CH[dev.uiid],dev.ch.length);
+  if(roomKey(dev.name))return Math.min(2,dev.ch.length);
+  return Math.min(dev.ch.length,4);
+}
+function roomName(dev){const c=S.cfg[dev.id];return (c&&c.room)||dev.name;}
+function chName(dev,o){
+  const k=dev.id+':'+o;if(S.names[k])return S.names[k];
+  const rk=roomKey(roomName(dev));
+  if(rk&&DEF_NAMES[rk][o])return DEF_NAMES[rk][o];
+  return 'Luz '+(o+1);
+}
+const list=()=>S.demo?demoDevs:devices;
+
+async function toggle(id,o){
+  const dev=list().find(d=>d.id===id);if(!dev)return;
+  if(!dev.online){toast('Interruptor offline.',1);return;}
+  const c=dev.ch.find(x=>x.o===o);const nv=c.s==='on'?'off':'on';
+  c.s=nv;c.busy=true;render();
+  if(navigator.vibrate)navigator.vibrate(15);
+  if(S.demo){c.busy=false;render();return;}
+  try{
+    await call('POST','/v2/device/thing/status',{type:1,id:dev.id,params:dev.multi?{switches:[{switch:nv,outlet:o}]}:{switch:nv}});
+  }catch(e){c.s=nv==='on'?'off':'on';toast('Não foi possível: '+e.message,1);}
+  c.busy=false;render();
+}
+
+async function allOff(){
+  const ds=list();let n=0;
+  for(const dev of ds){
+    const cnt=chCount(dev);const ligados=dev.ch.slice(0,cnt).filter(c=>c.s==='on');
+    if(!ligados.length||!dev.online)continue;
+    ligados.forEach(c=>c.s='off');n+=ligados.length;
+    if(!S.demo){
+      try{await call('POST','/v2/device/thing/status',{type:1,id:dev.id,params:dev.multi?{switches:ligados.map(c=>({switch:'off',outlet:c.o}))}:{switch:'off'}});}
+      catch(e){toast(e.message,1);}
+    }
+  }
+  render();toast(n?'Tudo apagado 🌙':'Já estava tudo apagado');
+}
+
+/* ---------- interface ---------- */
+const BULB='<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
+
+function setStatus(cls,txt){$('dot').className='dot '+cls;$('stTxt').textContent=txt;}
+
+function render(){
+  const m=$('main');
+  if(S.demo)setStatus('demo','Modo demonstração');
+  else if(!logged())setStatus('','Não conectado');
+  if(!S.demo&&!logged()){
+    $('bar').style.display='none';
+    m.innerHTML=`<div class="welcome"><h2>Bem-vindo! 👋</h2>
+      <p>Controle as luzes dos seus interruptores Sonoff pelo celular. Para conectar, configure sua conta de desenvolvedor do eWeLink.</p>
+      <button class="btn" onclick="openCfg()">Configurar eWeLink</button>
+      <button class="btn sec" onclick="setDemo(true)">Ver demonstração</button></div>`;
+    return;
+  }
+  const ds=list();
+  $('bar').style.display=ds.length?'block':'none';
+  if(!ds.length){m.innerHTML=`<div class="welcome"><h2>Nenhum interruptor encontrado</h2><p>Confira se os interruptores estão na mesma conta do eWeLink usada no login.</p></div>`;return;}
+  m.innerHTML=ds.map(dev=>{
+    const cnt=chCount(dev);
+    const ligadas=dev.ch.slice(0,cnt).filter(c=>c.s==='on').length;
+    const tiles=dev.ch.slice(0,cnt).map(c=>{
+      const on=c.s==='on';
+      const cls='tile'+(on?' on':'')+(!dev.online?' off-line':'')+(c.busy?' busy':'');
+      return `<button class="${cls}" onclick="toggle('${esc(dev.id)}',${c.o})">${BULB}<div><div class="n">${esc(chName(dev,c.o))}</div><div class="s">${!dev.online?'Offline':on?'Acesa':'Apagada'}</div></div></button>`;
+    }).join('');
+    return `<section class="room"><div class="rh"><h2>${esc(roomName(dev))}<small>${ligadas?ligadas+' acesa(s)':'tudo apagado'}</small></h2><button class="ed" onclick="openEd('${esc(dev.id)}')">✏️</button></div><div class="grid">${tiles}</div></section>`;
+  }).join('');
+}
+
+/* ---------- configurações ---------- */
+function openCfg(){$('cAppId').value=S.appId;$('cSecret').value=S.secret;$('cRedir').value=S.redirect||defRedirect;$('bLogout').style.display=logged()?'block':'none';$('ovCfg').classList.add('show');}
+function closeCfg(){$('ovCfg').classList.remove('show');}
+function readCfg(){S.appId=$('cAppId').value.trim();S.secret=$('cSecret').value.trim();S.redirect=$('cRedir').value.trim()||defRedirect;save();}
+function setDemo(v){S.demo=v;save();closeCfg();render();if(!v)loadDevices();}
+
+let edId=null;
+function openEd(id){
+  const dev=list().find(d=>d.id===id);if(!dev)return;edId=id;
+  $('eRoom').value=roomName(dev);
+  const sel=$('eN');[...sel.options].forEach(op=>op.disabled=+op.value>dev.ch.length);
+  sel.value=chCount(dev);drawEdNames(dev);
+  $('ovEd').classList.add('show');
+}
+function drawEdNames(dev){
+  const n=+$('eN').value;
+  $('eNames').innerHTML=dev.ch.slice(0,n).map(c=>`<label>Nome do botão ${c.o+1}</label><input data-o="${c.o}" value="${esc(chName(dev,c.o))}">`).join('');
+}
+$('eN').onchange=()=>{const dev=list().find(d=>d.id===edId);if(dev)drawEdNames(dev);};
+$('bEdCancel').onclick=()=>$('ovEd').classList.remove('show');
+$('bEdSave').onclick=()=>{
+  const dev=list().find(d=>d.id===edId);if(!dev)return;
+  S.cfg[edId]={room:$('eRoom').value.trim()||dev.name,n:+$('eN').value};
+  document.querySelectorAll('#eNames input').forEach(i=>{const v=i.value.trim();if(v)S.names[edId+':'+i.dataset.o]=v;});
+  save();$('ovEd').classList.remove('show');render();toast('Salvo ✅');
+};
+
+$('bCfg').onclick=openCfg;
+$('bCloseCfg').onclick=closeCfg;
+$('bLogin').onclick=()=>{readCfg();login();};
+$('bDemo').onclick=()=>setDemo(true);
+$('bLogout').onclick=()=>{if(!confirm('Sair da conta eWeLink neste aparelho?'))return;S.at='';S.rt='';S.atExp=0;save();devices=[];closeCfg();render();};
+$('bRef').onclick=()=>{if(S.demo){toast('Modo demonstração');return;}loadDevices();};
+$('bAllOff').onclick=allOff;
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
+
+/* ---------- atualização automática ---------- */
+function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);},20000);}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);});
+
+/* ---------- PWA (ícone e manifest embutidos) ---------- */
+function setupPWA(){
+  const mk=s=>{
+    const c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
+    const g=x.createLinearGradient(0,0,s,s);g.addColorStop(0,'#1e3a8a');g.addColorStop(1,'#0b1120');
+    x.fillStyle=g;x.fillRect(0,0,s,s);
+    const u=s/100;
+    x.strokeStyle='#e8edf7';x.lineWidth=6*u;x.lineJoin='round';x.lineCap='round';
+    x.beginPath();x.moveTo(22*u,48*u);x.lineTo(50*u,24*u);x.lineTo(78*u,48*u);x.stroke();
+    x.beginPath();x.moveTo(30*u,44*u);x.lineTo(30*u,76*u);x.lineTo(70*u,76*u);x.lineTo(70*u,44*u);x.stroke();
+    x.fillStyle='#fbbf24';x.shadowColor='#fbbf24';x.shadowBlur=12*u;
+    x.beginPath();x.arc(50*u,56*u,9*u,0,Math.PI*2);x.fill();
+    return c.toDataURL('image/png');
+  };
+  const i192=mk(192),i512=mk(512);
+  $('fav').href=i192;$('ati').href=i192;
+  const base=location.origin+location.pathname;
+  const man={name:'Casa Inteligente',short_name:'Casa',start_url:base,scope:base,display:'standalone',background_color:'#0b1120',theme_color:'#0b1120',
+    icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+  $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
+}
+
+/* ---------- início ---------- */
+(async()=>{
+  setupPWA();
+  render();
+  await handleCallback();
+  render();
+  loadDevices();
+  startTimer();
+})();
+</script>
+</body>
+</html>
