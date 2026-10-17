@@ -21,10 +21,12 @@ header h1{font-size:20px;margin:0;flex:1}
 .dot.ok{background:var(--ok)}.dot.demo{background:var(--on)}.dot.err{background:var(--err)}
 .ib{background:var(--card);border:1px solid var(--line);color:var(--txt);width:40px;height:40px;border-radius:12px;font-size:18px;display:grid;place-items:center;cursor:pointer}
 .ib.spin span{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin:12px 0}
+.tabs button{flex:1;background:none;border:none;color:var(--mut);padding:10px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.tabs button.act{background:var(--card2);color:var(--txt)}
 .room{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin:14px 0}
 .rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .rh h2{font-size:16px;margin:0}.rh small{color:var(--mut);font-weight:400;margin-left:6px}
-.ed{background:none;border:none;color:var(--mut);font-size:16px;cursor:pointer;padding:6px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .tile{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;color:var(--txt);cursor:pointer;transition:.2s;min-height:112px;display:flex;flex-direction:column;justify-content:space-between}
 .tile svg{width:30px;height:30px;stroke:var(--mut);fill:none;transition:.2s}
@@ -35,6 +37,27 @@ header h1{font-size:20px;margin:0;flex:1}
 .tile.on .s{color:var(--on)}
 .tile.off-line{opacity:.45;cursor:not-allowed}
 .tile.busy{opacity:.7}
+/* planta */
+.planWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px}
+#plan{width:100%;display:block;user-select:none;-webkit-user-select:none}
+#plan.editing{touch-action:none}
+.rm rect.b{fill:var(--card2);stroke:#3a4870;stroke-width:.6;transition:fill .3s,stroke .3s}
+.rm.nolight rect.b{fill:#111829;stroke-dasharray:1.5 1}
+.rm.lit rect.b{fill:rgba(251,191,36,.20);stroke:var(--on);stroke-width:.8}
+.rm.sel rect.b{stroke:var(--acc);stroke-width:1.1;stroke-dasharray:none}
+.rm text{fill:var(--txt);text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.rm .rn{font-size:3.6px;font-weight:700}
+.rm .rs{font-size:2.6px;fill:var(--mut)}
+.rm.lit .rs{fill:var(--on)}
+.rm{cursor:pointer}
+.pool{fill:rgba(56,189,248,.18);stroke:rgba(56,189,248,.55);stroke-width:.4;pointer-events:none}
+.hdl{fill:var(--acc);stroke:#fff;stroke-width:.4}
+.planHint{font-size:12px;color:var(--mut);text-align:center;margin:8px 0 2px}
+.etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.etools button{flex:1 1 30%;padding:11px 6px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:600;cursor:pointer}
+.etools button.pri{background:var(--acc);border-color:var(--acc)}
+.etools button.dan{color:var(--err);border-color:var(--err);background:transparent}
+.etools button:disabled{opacity:.4}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%)}
 .btn{width:100%;padding:14px;border-radius:14px;border:none;font-size:15px;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
 .btn.sec{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
@@ -46,12 +69,21 @@ header h1{font-size:20px;margin:0;flex:1}
 .ov.show{display:flex}
 .sheet{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
 .sheet h3{margin:0 0 14px}
+.sheet .sh{display:flex;align-items:center;justify-content:space-between}
+.sheet .sh h3{margin:0}
+.x{background:none;border:none;color:var(--mut);font-size:22px;cursor:pointer;padding:4px 8px}
 label{display:block;font-size:12px;color:var(--mut);margin:12px 0 6px}
 input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:15px}
 .hint{font-size:12px;color:var(--mut);line-height:1.5;margin-top:8px}
 .toast{position:fixed;left:16px;right:16px;bottom:90px;background:#1f2937;border:1px solid var(--line);padding:12px 14px;border-radius:12px;font-size:13px;display:none;z-index:30;line-height:1.4}
 .toast.show{display:block}.toast.err{border-color:var(--err)}
 .row{display:flex;gap:10px}.row>*{flex:1}
+.dev{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}
+.dev h4{margin:0 0 4px;font-size:15px}
+.chk{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:8px;font-size:14px;cursor:pointer}
+.chk input{width:20px;height:20px;flex:none}
+.chk small{color:var(--mut);display:block}
+.empty{color:var(--mut);font-size:14px;line-height:1.5;padding:8px 0 4px}
 </style>
 </head>
 <body>
@@ -64,9 +96,24 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
 <main id="main"></main>
 <div class="bar" id="bar" style="display:none"><button class="btn sec" id="bAllOff">🌙 Apagar tudo</button></div>
 
+<!-- Cômodo -->
+<div class="ov" id="ovRoom"><div class="sheet">
+  <div class="sh"><h3 id="rTitle">Cômodo</h3><button class="x" onclick="closeRoom()">✕</button></div>
+  <div id="rBody" style="margin-top:14px"></div>
+</div></div>
+
+<!-- Vincular luzes ao cômodo -->
+<div class="ov" id="ovAssign"><div class="sheet">
+  <div class="sh"><h3 id="aTitle">Luzes do cômodo</h3><button class="x" onclick="$('ovAssign').classList.remove('show')">✕</button></div>
+  <div class="hint">Marque as luzes que ficam neste cômodo.</div>
+  <div id="aBody"></div>
+  <div style="margin-top:16px"><button class="btn" id="bAssignSave">Salvar</button></div>
+</div></div>
+
 <!-- Configurações -->
 <div class="ov" id="ovCfg"><div class="sheet">
   <h3>⚙ Configurações</h3>
+  <button class="btn sec" id="bDevs">🔌 Interruptores e luzes</button>
   <label>App ID (eWeLink Developer)</label>
   <input id="cAppId" autocomplete="off" placeholder="Cole o APPID aqui">
   <label>App Secret</label>
@@ -78,23 +125,16 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
     <button class="btn" id="bLogin">Salvar e entrar com eWeLink</button>
     <button class="btn sec" id="bDemo">Usar modo demonstração</button>
     <button class="btn dan" id="bLogout">Sair da conta eWeLink</button>
+    <button class="btn sec" id="bResetPlan">Restaurar planta padrão</button>
     <button class="btn sec" id="bCloseCfg">Fechar</button>
   </div>
 </div></div>
 
-<!-- Editar interruptor -->
-<div class="ov" id="ovEd"><div class="sheet">
-  <h3>✏️ Editar interruptor</h3>
-  <label>Cômodo</label>
-  <input id="eRoom">
-  <label>Quantidade de botões (canais)</label>
-  <select id="eN"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
-  <div id="eNames"></div>
-  <div class="hint">Se as luzes estiverem trocadas, é só trocar os nomes dos canais.</div>
-  <div style="margin-top:18px" class="row">
-    <button class="btn sec" id="bEdCancel">Cancelar</button>
-    <button class="btn" id="bEdSave">Salvar</button>
-  </div>
+<!-- Interruptores -->
+<div class="ov" id="ovDevs"><div class="sheet">
+  <div class="sh"><h3>🔌 Interruptores e luzes</h3><button class="x" onclick="$('ovDevs').classList.remove('show')">✕</button></div>
+  <div id="dBody"></div>
+  <div style="margin-top:16px"><button class="btn" id="bDevsSave">Salvar</button></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -105,11 +145,39 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const defRedirect=location.origin+location.pathname;
 
-let S=Object.assign({appId:'',secret:'',redirect:defRedirect,region:'us',at:'',rt:'',atExp:0,demo:false,names:{},cfg:{}},JSON.parse(localStorage.getItem(LS)||'{}'));
+const PLAN_VER=2;
+const DEF_ROOMS=()=>[
+  {id:'jardim',name:'Jardim (fundos)',x:0,y:0,w:59.5,h:14},
+  {id:'piscina',name:'Área da Piscina',x:0,y:14,w:70,h:70.6,ly:.87},
+  {id:'banho2',name:'Banho 02',x:59.5,y:0,w:21.7,h:13.3},
+  {id:'closet',name:'Closet',x:81.2,y:0,w:18.8,h:13.3},
+  {id:'suite',name:'Suíte',x:70,y:13.3,w:30,h:23.6},
+  {id:'dorm2',name:'Dormitório 02',x:70,y:36.9,w:22,h:22.1},
+  {id:'banho1',name:'Banho 01',x:70,y:59,w:22,h:11.6},
+  {id:'dorm1',name:'Dormitório 01',x:70,y:70.6,w:22,h:21.4},
+  {id:'corredor',name:'Circulação',x:92,y:36.9,w:8,h:69.1},
+  {id:'jardimInv',name:'Jardim de Inverno',x:70,y:92,w:22,h:14},
+  {id:'banho3',name:'Banho 03',x:0,y:84.6,w:10,h:18.7},
+  {id:'lavanderia',name:'Lavanderia',x:10,y:84.6,w:12.4,h:18.7},
+  {id:'cozinha',name:'Cozinha e Gourmet',x:22.4,y:84.6,w:47.6,h:33.8},
+  {id:'quintal',name:'Quintal',x:0,y:103.3,w:22.4,h:31.7},
+  {id:'sala',name:'Sala de Estar',x:70,y:106,w:30,h:28.6},
+  {id:'hall',name:'Hall',x:59.6,y:118.4,w:10.4,h:10},
+  {id:'garagem',name:'Garagem',x:22.4,y:118.4,w:37.2,h:34.2},
+  {id:'externa',name:'Acesso Entrada',x:59.6,y:128.4,w:10.4,h:55.6},
+  {id:'jardimFrente',name:'Jardim Frontal',x:70,y:134.6,w:30,h:49.4},
+  {id:'frente',name:'Frente',x:22.4,y:152.6,w:37.2,h:31.4},
+  {id:'jardimLat',name:'Jardim Lateral',x:0,y:135,w:22.4,h:22}
+];
+// decoração (piscina), posição relativa ao cômodo
+const DECO=[{room:'piscina',x:25.8,y:12.4,w:34.2,h:17},{room:'piscina',x:25.8,y:30.4,w:10,h:13.8}];
+
+let S=Object.assign({appId:'',secret:'',redirect:defRedirect,region:'us',at:'',rt:'',atExp:0,demo:false,names:{},cfg:{},chRoom:{},rooms:null,view:'plan'},JSON.parse(localStorage.getItem(LS)||'{}'));
+if(!Array.isArray(S.rooms)||S.planVer!==PLAN_VER){S.rooms=DEF_ROOMS();S.planVer=PLAN_VER;}
 const save=()=>localStorage.setItem(LS,JSON.stringify(S));
 
 const DEF_NAMES={sala:['Luz da Sala','Luz da Cozinha'],corredor:['Corredor Interno','Corredor Externo']};
-// Quantidade de canais conhecida por modelo (UIID eWeLink)
+const DEF_CHROOM={sala:['sala','cozinha'],corredor:['corredor','externa']};
 const UIID_CH={1:1,6:1,14:1,7:2,8:3,112:1,113:2,114:3,138:1,139:2,140:3,160:1,161:2,162:3,210:1,211:2,212:3};
 
 let devices=[];
@@ -117,7 +185,7 @@ let demoDevs=[
   {id:'demo-sala',name:'Sala',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'on'}]},
   {id:'demo-corredor',name:'Corredor',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'off'}]}
 ];
-let loading=false,timer=null;
+let loading=false,timer=null,openRoomId=null,editPlan=false,selRoom=null,drag=null;
 
 /* ---------- utilidades ---------- */
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='toast',err?6000:2500);}
@@ -158,7 +226,6 @@ async function call(method,path,body){
     throw e;
   }
 }
-
 async function login(){
   if(!S.appId||!S.secret){toast('Preencha App ID e App Secret.',1);return;}
   const seq=String(Date.now());
@@ -179,10 +246,10 @@ async function handleCallback(){
   }catch(e){toast('Falha ao entrar: '+e.message,1);}
 }
 
-/* ---------- dispositivos ---------- */
+/* ---------- dispositivos e luzes ---------- */
 async function loadDevices(silent){
   if(S.demo||!logged()){render();return;}
-  if(loading)return;loading=true;$('bRef').classList.add('spin');
+  if(loading||drag)return;loading=true;$('bRef').classList.add('spin');
   try{
     const d=await call('GET','/v2/device/thing?num=0');
     devices=(d.thingList||[]).filter(t=>t.itemType===1||t.itemType===2).map(t=>{
@@ -196,23 +263,29 @@ async function loadDevices(silent){
   }catch(e){setStatus('err','Erro de conexão');if(!silent)toast(e.message,1);}
   loading=false;$('bRef').classList.remove('spin');render();
 }
-
-function roomKey(name){const n=(name||'').toLowerCase();if(n.includes('sala'))return'sala';if(n.includes('corredor'))return'corredor';return null;}
+const list=()=>S.demo?demoDevs:devices;
+function devKey(name){const n=(name||'').toLowerCase();if(n.includes('sala'))return'sala';if(n.includes('corredor'))return'corredor';return null;}
 function chCount(dev){
   const c=S.cfg[dev.id];if(c&&c.n)return Math.min(c.n,dev.ch.length);
   if(!dev.multi)return 1;
   if(UIID_CH[dev.uiid])return Math.min(UIID_CH[dev.uiid],dev.ch.length);
-  if(roomKey(dev.name))return Math.min(2,dev.ch.length);
+  if(devKey(dev.name))return Math.min(2,dev.ch.length);
   return Math.min(dev.ch.length,4);
 }
-function roomName(dev){const c=S.cfg[dev.id];return (c&&c.room)||dev.name;}
 function chName(dev,o){
   const k=dev.id+':'+o;if(S.names[k])return S.names[k];
-  const rk=roomKey(roomName(dev));
-  if(rk&&DEF_NAMES[rk][o])return DEF_NAMES[rk][o];
-  return 'Luz '+(o+1);
+  const dk=devKey(dev.name);
+  if(dk&&DEF_NAMES[dk][o])return DEF_NAMES[dk][o];
+  return dev.name+' · Luz '+(o+1);
 }
-const list=()=>S.demo?demoDevs:devices;
+function chRoom(dev,o){
+  const k=dev.id+':'+o;
+  if(k in S.chRoom)return S.rooms.some(r=>r.id===S.chRoom[k])?S.chRoom[k]:null;
+  const dk=devKey(dev.name);const r=dk&&DEF_CHROOM[dk][o];
+  return r&&S.rooms.some(x=>x.id===r)?r:null;
+}
+function allCh(){const out=[];for(const d of list()){d.ch.slice(0,chCount(d)).forEach(c=>out.push({dev:d,c,key:d.id+':'+c.o,room:chRoom(d,c.o)}));}return out;}
+const lightsOf=rid=>allCh().filter(x=>x.room===rid);
 
 async function toggle(id,o){
   const dev=list().find(d=>d.id===id);if(!dev)return;
@@ -226,25 +299,30 @@ async function toggle(id,o){
   }catch(e){c.s=nv==='on'?'off':'on';toast('Não foi possível: '+e.message,1);}
   c.busy=false;render();
 }
-
-async function allOff(){
-  const ds=list();let n=0;
-  for(const dev of ds){
-    const cnt=chCount(dev);const ligados=dev.ch.slice(0,cnt).filter(c=>c.s==='on');
-    if(!ligados.length||!dev.online)continue;
-    ligados.forEach(c=>c.s='off');n+=ligados.length;
+// liga/desliga um conjunto de luzes, agrupando por interruptor
+async function setMany(items,state){
+  const by={};
+  items.filter(x=>x.dev.online&&x.c.s!==state).forEach(x=>{(by[x.dev.id]=by[x.dev.id]||{dev:x.dev,cs:[]}).cs.push(x.c);});
+  const groups=Object.values(by);let n=0;
+  for(const g of groups){
+    g.cs.forEach(c=>c.s=state);n+=g.cs.length;
     if(!S.demo){
-      try{await call('POST','/v2/device/thing/status',{type:1,id:dev.id,params:dev.multi?{switches:ligados.map(c=>({switch:'off',outlet:c.o}))}:{switch:'off'}});}
-      catch(e){toast(e.message,1);}
+      try{await call('POST','/v2/device/thing/status',{type:1,id:g.dev.id,params:g.dev.multi?{switches:g.cs.map(c=>({switch:state,outlet:c.o}))}:{switch:state}});}
+      catch(e){g.cs.forEach(c=>c.s=state==='on'?'off':'on');toast(e.message,1);}
     }
   }
-  render();toast(n?'Tudo apagado 🌙':'Já estava tudo apagado');
+  render();return n;
 }
+async function allOff(){const n=await setMany(allCh(),'off');toast(n?'Tudo apagado 🌙':'Já estava tudo apagado');}
 
 /* ---------- interface ---------- */
 const BULB='<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
-
 function setStatus(cls,txt){$('dot').className='dot '+cls;$('stTxt').textContent=txt;}
+function tile(x){
+  const on=x.c.s==='on';
+  const cls='tile'+(on?' on':'')+(!x.dev.online?' off-line':'')+(x.c.busy?' busy':'');
+  return `<button class="${cls}" onclick="toggle('${esc(x.dev.id)}',${x.c.o})">${BULB}<div><div class="n">${esc(chName(x.dev,x.c.o))}</div><div class="s">${!x.dev.online?'Offline':on?'Acesa':'Apagada'}</div></div></button>`;
+}
 
 function render(){
   const m=$('main');
@@ -258,20 +336,182 @@ function render(){
       <button class="btn sec" onclick="setDemo(true)">Ver demonstração</button></div>`;
     return;
   }
-  const ds=list();
-  $('bar').style.display=ds.length?'block':'none';
-  if(!ds.length){m.innerHTML=`<div class="welcome"><h2>Nenhum interruptor encontrado</h2><p>Confira se os interruptores estão na mesma conta do eWeLink usada no login.</p></div>`;return;}
-  m.innerHTML=ds.map(dev=>{
-    const cnt=chCount(dev);
-    const ligadas=dev.ch.slice(0,cnt).filter(c=>c.s==='on').length;
-    const tiles=dev.ch.slice(0,cnt).map(c=>{
-      const on=c.s==='on';
-      const cls='tile'+(on?' on':'')+(!dev.online?' off-line':'')+(c.busy?' busy':'');
-      return `<button class="${cls}" onclick="toggle('${esc(dev.id)}',${c.o})">${BULB}<div><div class="n">${esc(chName(dev,c.o))}</div><div class="s">${!dev.online?'Offline':on?'Acesa':'Apagada'}</div></div></button>`;
-    }).join('');
-    return `<section class="room"><div class="rh"><h2>${esc(roomName(dev))}<small>${ligadas?ligadas+' acesa(s)':'tudo apagado'}</small></h2><button class="ed" onclick="openEd('${esc(dev.id)}')">✏️</button></div><div class="grid">${tiles}</div></section>`;
-  }).join('');
+  $('bar').style.display=editPlan?'none':'block';
+  if(!m.querySelector('.tabs')||m.dataset.view!==S.view||m.dataset.edit!==String(editPlan))buildMain();
+  if(S.view==='plan')renderPlan();else renderList();
+  if(openRoomId)renderRoomSheet();
 }
+function buildMain(){
+  const m=$('main');m.dataset.view=S.view;m.dataset.edit=String(editPlan);
+  const tabs=`<div class="tabs"><button class="${S.view==='plan'?'act':''}" onclick="setView('plan')">🏠 Planta</button><button class="${S.view==='list'?'act':''}" onclick="setView('list')">☰ Lista</button></div>`;
+  if(S.view==='plan'){
+    m.innerHTML=tabs+`<div class="planWrap"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="planHint" id="pHint"></div>
+      <div class="etools" id="eTools"></div></div><div id="unassigned"></div>`;
+    const svg=$('plan');
+    svg.addEventListener('pointerdown',pDown);
+    svg.addEventListener('pointermove',pMove);
+    svg.addEventListener('pointerup',pUp);
+    svg.addEventListener('pointercancel',pUp);
+  }else{
+    m.innerHTML=tabs+`<div id="listBox"></div>`;
+  }
+}
+function setView(v){S.view=v;editPlan=false;selRoom=null;save();render();}
+
+function planH(){return Math.max(40,...S.rooms.map(r=>r.y+r.h));}
+function renderPlan(){
+  const svg=$('plan');if(!svg)return;
+  const H=planH();
+  svg.setAttribute('viewBox',`-1 -1 102 ${H+2}`);
+  svg.classList.toggle('editing',editPlan);
+  svg.innerHTML=`<defs><radialGradient id="glow"><stop offset="0" stop-color="#fbbf24" stop-opacity=".45"/><stop offset="1" stop-color="#fbbf24" stop-opacity="0"/></radialGradient></defs>`+
+  [...S.rooms].sort((a,b)=>(a.id===selRoom)-(b.id===selRoom)).map(r=>{
+    const ls=lightsOf(r.id),on=ls.filter(x=>x.c.s==='on').length;
+    const cx=r.x+r.w/2,cy=r.y+r.h*(r.ly||.5);
+    const cls='rm'+(on?' lit':'')+(!ls.length?' nolight':'')+(editPlan&&selRoom===r.id?' sel':'');
+    const sub=ls.length?`💡 ${on}/${ls.length}`:(editPlan?'sem luzes':'');
+    const rot=r.w<14&&r.h>r.w*1.4;
+    const avail=(rot?r.h:r.w)-2;
+    const fs=Math.min(3.6,avail/(r.name.length*.62)),ss=Math.min(2.6,fs*.8);
+    const gap=Math.min(r.h,r.w)<16?fs*.55:fs*.7;
+    const tr=rot?` transform="rotate(-90 ${cx} ${cy})"`:'';
+    const deco=DECO.filter(d=>d.room===r.id&&d.x+d.w<=r.w&&d.y+d.h<=r.h).map(d=>`<rect class="pool" x="${r.x+d.x}" y="${r.y+d.y}" width="${d.w}" height="${d.h}" rx=".8"/>`).join('');
+    return `<g class="${cls}" data-id="${esc(r.id)}">
+      <rect class="b" x="${r.x+.4}" y="${r.y+.4}" width="${r.w-.8}" height="${r.h-.8}" rx="1.5"/>
+      ${deco}
+      ${on?`<ellipse cx="${r.x+r.w/2}" cy="${r.y+r.h/2}" rx="${r.w/2.2}" ry="${r.h/2.2}" fill="url(#glow)" pointer-events="none"/>`:''}
+      <g${tr}><text class="rn" style="font-size:${fs.toFixed(2)}px" x="${cx}" y="${cy-(sub?gap:0)}">${esc(r.name)}</text>
+      ${sub?`<text class="rs" style="font-size:${ss.toFixed(2)}px" x="${cx}" y="${cy+gap+.4}">${sub}</text>`:''}</g>
+      ${editPlan&&selRoom===r.id?`<circle class="hdl" data-h="1" cx="${r.x+r.w-.8}" cy="${r.y+r.h-.8}" r="2.4"/>`:''}
+    </g>`;
+  }).join('');
+  $('pHint').textContent=editPlan?(selRoom?'Arraste para mover · bolinha azul redimensiona':'Toque em um cômodo para selecionar'):'Toque em um cômodo para controlar';
+  const t=$('eTools');
+  if(editPlan){
+    const d=selRoom?'':'disabled';
+    t.innerHTML=`<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
+  }else t.innerHTML=`<button onclick="toggleEdit()">✏️ Editar planta</button>`;
+  // luzes sem cômodo
+  const un=allCh().filter(x=>!x.room);
+  $('unassigned').innerHTML=un.length&&!editPlan?`<section class="room"><div class="rh"><h2>Sem cômodo<small>vincule em Editar planta → Luzes</small></h2></div><div class="grid">${un.map(tile).join('')}</div></section>`:'';
+}
+function renderList(){
+  const box=$('listBox');if(!box)return;
+  const ch=allCh();
+  if(!ch.length){box.innerHTML=`<div class="welcome"><h2>Nenhum interruptor encontrado</h2><p>Confira se os interruptores estão na mesma conta do eWeLink usada no login.</p></div>`;return;}
+  const secs=S.rooms.map(r=>({name:r.name,ls:ch.filter(x=>x.room===r.id)})).filter(g=>g.ls.length);
+  const un=ch.filter(x=>!x.room);if(un.length)secs.push({name:'Sem cômodo',ls:un});
+  box.innerHTML=secs.map(g=>{const on=g.ls.filter(x=>x.c.s==='on').length;
+    return `<section class="room"><div class="rh"><h2>${esc(g.name)}<small>${on?on+' acesa(s)':'tudo apagado'}</small></h2></div><div class="grid">${g.ls.map(tile).join('')}</div></section>`;}).join('');
+}
+
+/* ---------- cômodo (sheet) ---------- */
+function openRoom(id){openRoomId=id;renderRoomSheet();$('ovRoom').classList.add('show');}
+function closeRoom(){openRoomId=null;$('ovRoom').classList.remove('show');}
+function renderRoomSheet(){
+  const r=S.rooms.find(x=>x.id===openRoomId);if(!r){closeRoom();return;}
+  $('rTitle').textContent=r.name;
+  const ls=lightsOf(r.id);
+  if(!ls.length){$('rBody').innerHTML=`<div class="empty">Nenhuma luz neste cômodo ainda. Use <b>✏️ Editar planta → 💡 Luzes</b> para vincular.</div>`;return;}
+  $('rBody').innerHTML=`<div class="grid">${ls.map(tile).join('')}</div>`+
+    (ls.length>1?`<div class="row" style="margin-top:14px"><button class="btn sec" onclick="roomAll('on')">💡 Acender tudo</button><button class="btn sec" onclick="roomAll('off')">🌙 Apagar tudo</button></div>`:'');
+}
+async function roomAll(st){await setMany(lightsOf(openRoomId),st);}
+
+/* ---------- edição da planta ---------- */
+function toggleEdit(){editPlan=!editPlan;selRoom=null;save();render();}
+function svgPt(e){const svg=$('plan');const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+const snap=v=>Math.round(v/2)*2;
+function pDown(e){
+  const g=e.target.closest('[data-id]');
+  if(!editPlan){return;}
+  if(!g){selRoom=null;renderPlan();return;}
+  const id=g.dataset.id;const r=S.rooms.find(x=>x.id===id);
+  const p=svgPt(e);
+  drag={id,mode:e.target.dataset.h?'resize':'move',sx:p.x,sy:p.y,o:{...r},moved:false};
+  if(selRoom!==id){selRoom=id;renderPlan();}
+  $('plan').setPointerCapture(e.pointerId);
+}
+function pMove(e){
+  if(!drag)return;
+  const p=svgPt(e);const dx=p.x-drag.sx,dy=p.y-drag.sy;
+  if(Math.abs(dx)+Math.abs(dy)>1)drag.moved=true;
+  if(!drag.moved)return;
+  const r=S.rooms.find(x=>x.id===drag.id);
+  if(drag.mode==='move'){
+    r.x=Math.max(0,Math.min(100-r.w,snap(drag.o.x+dx)));
+    r.y=Math.max(0,Math.min(200,snap(drag.o.y+dy)));
+  }else{
+    r.w=Math.max(10,Math.min(100-r.x,snap(drag.o.w+dx)));
+    r.h=Math.max(10,Math.min(200,snap(drag.o.h+dy)));
+  }
+  renderPlan();
+}
+function pUp(e){
+  if(!drag){
+    // clique normal (fora do modo edição)
+    if(!editPlan&&e.type==='pointerup'){const g=e.target.closest('[data-id]');if(g)openRoom(g.dataset.id);}
+    return;
+  }
+  if(drag.moved)save();
+  drag=null;
+}
+function addRoom(){
+  const name=prompt('Nome do novo cômodo:','Novo cômodo');if(!name)return;
+  const id='r'+Date.now().toString(36);
+  S.rooms.push({id,name:name.trim(),x:0,y:snap(planH()),w:40,h:24});
+  selRoom=id;save();renderPlan();
+}
+function renameRoom(){const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;const n=prompt('Nome do cômodo:',r.name);if(n&&n.trim()){r.name=n.trim();save();renderPlan();}}
+function delRoom(){
+  const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;
+  if(!confirm(`Excluir "${r.name}"? As luzes dele ficam sem cômodo.`))return;
+  S.rooms=S.rooms.filter(x=>x.id!==selRoom);
+  for(const k in S.chRoom)if(S.chRoom[k]===selRoom)S.chRoom[k]=null;
+  selRoom=null;save();render();
+}
+function openAssign(){
+  const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;
+  $('aTitle').textContent='💡 Luzes · '+r.name;
+  const ch=allCh();
+  $('aBody').innerHTML=ch.length?ch.map(x=>{
+    const other=x.room&&x.room!==r.id?S.rooms.find(q=>q.id===x.room):null;
+    return `<label class="chk"><input type="checkbox" data-k="${esc(x.key)}" ${x.room===r.id?'checked':''}><span>${esc(chName(x.dev,x.c.o))}<small>${other?'Hoje em: '+esc(other.name):x.room===r.id?'Neste cômodo':'Sem cômodo'}</small></span></label>`;
+  }).join(''):`<div class="empty">Nenhum interruptor carregado ainda.</div>`;
+  $('ovAssign').classList.add('show');
+}
+$('bAssignSave').onclick=()=>{
+  document.querySelectorAll('#aBody input').forEach(i=>{
+    const k=i.dataset.k;const [dev,o]=[list().find(d=>k.startsWith(d.id+':')),+k.split(':').pop()];
+    const cur=dev?chRoom(dev,o):null;
+    if(i.checked)S.chRoom[k]=selRoom;
+    else if(cur===selRoom)S.chRoom[k]=null;
+  });
+  save();$('ovAssign').classList.remove('show');render();toast('Luzes vinculadas ✅');
+};
+
+/* ---------- interruptores ---------- */
+function openDevs(){
+  const ds=list();
+  const opts=sel=>`<option value="">— Sem cômodo —</option>`+S.rooms.map(r=>`<option value="${esc(r.id)}" ${sel===r.id?'selected':''}>${esc(r.name)}</option>`).join('');
+  $('dBody').innerHTML=ds.length?ds.map(d=>{
+    const n=chCount(d);
+    return `<div class="dev" data-dev="${esc(d.id)}"><h4>${esc(d.name)}</h4><div class="hint" style="margin:0">${d.online?'Online':'Offline'} · ${d.ch.length} canal(is) disponível(is)</div>
+      <label>Quantidade de botões</label><select data-n>${[1,2,3,4].map(i=>`<option ${i>d.ch.length?'disabled':''} ${i===n?'selected':''}>${i}</option>`).join('')}</select>
+      ${d.ch.slice(0,Math.max(n,1)).map(c=>`<label>Botão ${c.o+1}</label><div class="row"><input data-name="${c.o}" value="${esc(chName(d,c.o))}"><select data-room="${c.o}">${opts(chRoom(d,c.o))}</select></div>`).join('')}
+    </div>`;}).join(''):`<div class="empty">Nenhum interruptor carregado. Entre com o eWeLink ou use o modo demonstração.</div>`;
+  closeCfg();$('ovDevs').classList.add('show');
+}
+$('bDevsSave').onclick=()=>{
+  document.querySelectorAll('#dBody .dev').forEach(box=>{
+    const id=box.dataset.dev;
+    S.cfg[id]=Object.assign(S.cfg[id]||{},{n:+box.querySelector('[data-n]').value});
+    box.querySelectorAll('[data-name]').forEach(i=>{const v=i.value.trim();if(v)S.names[id+':'+i.dataset.name]=v;});
+    box.querySelectorAll('[data-room]').forEach(s=>{S.chRoom[id+':'+s.dataset.room]=s.value||null;});
+  });
+  save();$('ovDevs').classList.remove('show');render();toast('Salvo ✅');
+};
 
 /* ---------- configurações ---------- */
 function openCfg(){$('cAppId').value=S.appId;$('cSecret').value=S.secret;$('cRedir').value=S.redirect||defRedirect;$('bLogout').style.display=logged()?'block':'none';$('ovCfg').classList.add('show');}
@@ -279,35 +519,16 @@ function closeCfg(){$('ovCfg').classList.remove('show');}
 function readCfg(){S.appId=$('cAppId').value.trim();S.secret=$('cSecret').value.trim();S.redirect=$('cRedir').value.trim()||defRedirect;save();}
 function setDemo(v){S.demo=v;save();closeCfg();render();if(!v)loadDevices();}
 
-let edId=null;
-function openEd(id){
-  const dev=list().find(d=>d.id===id);if(!dev)return;edId=id;
-  $('eRoom').value=roomName(dev);
-  const sel=$('eN');[...sel.options].forEach(op=>op.disabled=+op.value>dev.ch.length);
-  sel.value=chCount(dev);drawEdNames(dev);
-  $('ovEd').classList.add('show');
-}
-function drawEdNames(dev){
-  const n=+$('eN').value;
-  $('eNames').innerHTML=dev.ch.slice(0,n).map(c=>`<label>Nome do botão ${c.o+1}</label><input data-o="${c.o}" value="${esc(chName(dev,c.o))}">`).join('');
-}
-$('eN').onchange=()=>{const dev=list().find(d=>d.id===edId);if(dev)drawEdNames(dev);};
-$('bEdCancel').onclick=()=>$('ovEd').classList.remove('show');
-$('bEdSave').onclick=()=>{
-  const dev=list().find(d=>d.id===edId);if(!dev)return;
-  S.cfg[edId]={room:$('eRoom').value.trim()||dev.name,n:+$('eN').value};
-  document.querySelectorAll('#eNames input').forEach(i=>{const v=i.value.trim();if(v)S.names[edId+':'+i.dataset.o]=v;});
-  save();$('ovEd').classList.remove('show');render();toast('Salvo ✅');
-};
-
 $('bCfg').onclick=openCfg;
 $('bCloseCfg').onclick=closeCfg;
+$('bDevs').onclick=openDevs;
 $('bLogin').onclick=()=>{readCfg();login();};
 $('bDemo').onclick=()=>setDemo(true);
 $('bLogout').onclick=()=>{if(!confirm('Sair da conta eWeLink neste aparelho?'))return;S.at='';S.rt='';S.atExp=0;save();devices=[];closeCfg();render();};
+$('bResetPlan').onclick=()=>{if(!confirm('Voltar a planta para o modelo padrão? Os vínculos de luzes também voltam ao padrão.'))return;S.rooms=DEF_ROOMS();S.planVer=PLAN_VER;S.chRoom={};save();closeCfg();render();};
 $('bRef').onclick=()=>{if(S.demo){toast('Modo demonstração');return;}loadDevices();};
 $('bAllOff').onclick=allOff;
-document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o){o.classList.remove('show');if(o.id==='ovRoom')openRoomId=null;}}));
 
 /* ---------- atualização automática ---------- */
 function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);},20000);}
