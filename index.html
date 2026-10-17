@@ -38,8 +38,17 @@ header h1{font-size:20px;margin:0;flex:1}
 .tile.off-line{opacity:.45;cursor:not-allowed}
 .tile.busy{opacity:.7}
 /* planta */
-.planWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px}
-#plan{width:100%;display:block;user-select:none;-webkit-user-select:none}
+.planWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;position:relative}
+#plan{width:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;max-height:calc(100dvh - 350px)}
+#plan.editing{max-height:none}
+.fsx,.fsoff{display:none}
+body.fs header,body.fs .st,body.fs .tabs,body.fs #pHint,body.fs #eTools,body.fs #unassigned,body.fs .bar{display:none!important}
+body.fs{overflow:hidden}
+body.fs .planWrap{position:fixed;inset:0;z-index:15;border:none;border-radius:0;background:var(--bg);padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}
+body.fs #plan{width:100%;height:100%;max-height:none}
+body.fs .fsx,body.fs .fsoff{display:grid;position:fixed;z-index:16;width:44px;height:44px;border-radius:50%;place-items:center;font-size:18px;background:rgba(20,28,47,.85);border:1px solid var(--line);color:var(--txt);cursor:pointer}
+body.fs .fsx{top:calc(10px + env(safe-area-inset-top));right:10px}
+body.fs .fsoff{bottom:calc(10px + env(safe-area-inset-bottom));right:10px}
 #plan .rm.sel{touch-action:none}
 .rm rect.b{fill:var(--card2);stroke:#3a4870;stroke-width:.6;transition:fill .3s,stroke .3s}
 .rm.nolight rect.b{fill:#111829;stroke-dasharray:1.5 1}
@@ -347,7 +356,7 @@ function buildMain(){
   const m=$('main');m.dataset.view=S.view;m.dataset.edit=String(editPlan);
   const tabs=`<div class="tabs"><button class="${S.view==='plan'?'act':''}" onclick="setView('plan')">🏠 Planta</button><button class="${S.view==='list'?'act':''}" onclick="setView('list')">☰ Lista</button></div>`;
   if(S.view==='plan'){
-    m.innerHTML=tabs+`<div class="planWrap"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg>
+    m.innerHTML=tabs+`<div class="planWrap"><button class="fsx" onclick="toggleFS()" title="Sair da tela cheia">✕</button><button class="fsoff" onclick="allOff()" title="Apagar tudo">🌙</button><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="planHint" id="pHint"></div>
       <div class="etools" id="eTools"></div></div><div id="unassigned"></div>`;
     const svg=$('plan');
@@ -355,6 +364,7 @@ function buildMain(){
     svg.addEventListener('pointermove',pMove);
     svg.addEventListener('pointerup',pUp);
     svg.addEventListener('pointercancel',pUp);
+    svg.addEventListener('contextmenu',ev=>ev.preventDefault());
     svg.addEventListener('touchstart',ev=>{if(editPlan&&ev.target.closest('.rm.sel'))ev.preventDefault();},{passive:false});
   }else{
     m.innerHTML=tabs+`<div id="listBox"></div>`;
@@ -389,13 +399,13 @@ function renderPlan(){
       ${editPlan&&selRoom===r.id?`<circle class="hdl" data-h="1" cx="${r.x+r.w-.8}" cy="${r.y+r.h-.8}" r="2.4"/>`:''}
     </g>`;
   }).join('');
-  $('pHint').textContent=editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque em um cômodo para controlar';
+  $('pHint').textContent=editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no cômodo para acender/apagar · segure para ver detalhes';
   const t=$('eTools');
   t.classList.toggle('fix',editPlan);document.body.classList.toggle('editing',editPlan);
   if(editPlan){
     const d=selRoom?'':'disabled';
     t.innerHTML=`<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
-  }else t.innerHTML=`<button onclick="toggleEdit()">✏️ Editar planta</button>`;
+  }else t.innerHTML=`<button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar planta</button>`;
   // luzes sem cômodo
   const un=allCh().filter(x=>!x.room);
   $('unassigned').innerHTML=un.length&&!editPlan?`<section class="room"><div class="rh"><h2>Sem cômodo<small>vincule em Editar planta → Luzes</small></h2></div><div class="grid">${un.map(tile).join('')}</div></section>`:'';
@@ -424,14 +434,19 @@ function renderRoomSheet(){
 async function roomAll(st){await setMany(lightsOf(openRoomId),st);}
 
 /* ---------- edição da planta ---------- */
-function toggleEdit(){editPlan=!editPlan;selRoom=null;save();render();}
+function toggleEdit(){if(document.body.classList.contains('fs'))toggleFS();editPlan=!editPlan;selRoom=null;save();render();}
 function svgPt(e){const svg=$('plan');const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 const snap=v=>Math.round(v/2)*2;
 // Edição: tocar seleciona (a tela continua rolando); só arrasta o cômodo já selecionado
 let tapId=null;
+let press=null;
 function pDown(e){
   const g=e.target.closest('[data-id]');
-  if(!editPlan)return;
+  if(!editPlan){
+    clearTimeout(press&&press.t);press=null;
+    if(g){const id=g.dataset.id;press={id,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);openRoom(id);}},500)};}
+    return;
+  }
   if(!g){tapId='__none';return;}
   const id=g.dataset.id;
   if(selRoom!==id){tapId=id;return;}
@@ -456,13 +471,37 @@ function pMove(e){
 }
 function pUp(e){
   if(drag){if(drag.moved)save();drag=null;return;}
-  if(e.type!=='pointerup'){tapId=null;return;} // rolagem cancela o toque
+  if(e.type!=='pointerup'){tapId=null;cancelPress();return;} // rolagem cancela o toque
   if(editPlan){
     if(tapId){selRoom=tapId==='__none'?null:tapId;tapId=null;renderPlan();}
     return;
   }
-  const g=e.target.closest('[data-id]');if(g)openRoom(g.dataset.id);
+  if(!press)return;
+  clearTimeout(press.t);const pr=press;press=null;
+  if(!pr.done)tapRoom(pr.id);
 }
+function cancelPress(){if(press){clearTimeout(press.t);press=null;}}
+// toque: 1 luz liga/desliga direto; várias luzes abre o painel
+function tapRoom(id){
+  const ls=lightsOf(id);
+  if(ls.length===1){
+    const x=ls[0];toggle(x.dev.id,x.c.o);
+    toast(chName(x.dev,x.c.o)+(x.c.s==='on'?' acesa 💡':' apagada 🌙'));
+  }else openRoom(id);
+}
+/* ---------- tela cheia ---------- */
+let wakeLock=null;
+async function toggleFS(){
+  const on=!document.body.classList.contains('fs');
+  document.body.classList.toggle('fs',on);
+  try{
+    if(on){if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen();
+      if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen');}
+    else{if(document.fullscreenElement)await document.exitFullscreen();if(wakeLock){wakeLock.release();wakeLock=null;}}
+  }catch(_){}
+  renderPlan();
+}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs')){document.body.classList.remove('fs');if(wakeLock){wakeLock.release();wakeLock=null;}renderPlan();}});
 function addRoom(){
   const name=prompt('Nome do novo cômodo:','Novo cômodo');if(!name)return;
   const id='r'+Date.now().toString(36);
