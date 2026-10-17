@@ -40,7 +40,7 @@ header h1{font-size:20px;margin:0;flex:1}
 /* planta */
 .planWrap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px}
 #plan{width:100%;display:block;user-select:none;-webkit-user-select:none}
-#plan.editing{touch-action:none}
+#plan .rm.sel{touch-action:none}
 .rm rect.b{fill:var(--card2);stroke:#3a4870;stroke-width:.6;transition:fill .3s,stroke .3s}
 .rm.nolight rect.b{fill:#111829;stroke-dasharray:1.5 1}
 .rm.lit rect.b{fill:rgba(251,191,36,.20);stroke:var(--on);stroke-width:.8}
@@ -54,6 +54,8 @@ header h1{font-size:20px;margin:0;flex:1}
 .hdl{fill:var(--acc);stroke:#fff;stroke-width:.4}
 .planHint{font-size:12px;color:var(--mut);text-align:center;margin:8px 0 2px}
 .etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.etools.fix{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;z-index:10;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
+body.editing{padding-bottom:170px}
 .etools button{flex:1 1 30%;padding:11px 6px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:600;cursor:pointer}
 .etools button.pri{background:var(--acc);border-color:var(--acc)}
 .etools button.dan{color:var(--err);border-color:var(--err);background:transparent}
@@ -353,6 +355,7 @@ function buildMain(){
     svg.addEventListener('pointermove',pMove);
     svg.addEventListener('pointerup',pUp);
     svg.addEventListener('pointercancel',pUp);
+    svg.addEventListener('touchstart',ev=>{if(editPlan&&ev.target.closest('.rm.sel'))ev.preventDefault();},{passive:false});
   }else{
     m.innerHTML=tabs+`<div id="listBox"></div>`;
   }
@@ -386,8 +389,9 @@ function renderPlan(){
       ${editPlan&&selRoom===r.id?`<circle class="hdl" data-h="1" cx="${r.x+r.w-.8}" cy="${r.y+r.h-.8}" r="2.4"/>`:''}
     </g>`;
   }).join('');
-  $('pHint').textContent=editPlan?(selRoom?'Arraste para mover · bolinha azul redimensiona':'Toque em um cômodo para selecionar'):'Toque em um cômodo para controlar';
+  $('pHint').textContent=editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque em um cômodo para controlar';
   const t=$('eTools');
+  t.classList.toggle('fix',editPlan);document.body.classList.toggle('editing',editPlan);
   if(editPlan){
     const d=selRoom?'':'disabled';
     t.innerHTML=`<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
@@ -423,14 +427,16 @@ async function roomAll(st){await setMany(lightsOf(openRoomId),st);}
 function toggleEdit(){editPlan=!editPlan;selRoom=null;save();render();}
 function svgPt(e){const svg=$('plan');const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 const snap=v=>Math.round(v/2)*2;
+// Edição: tocar seleciona (a tela continua rolando); só arrasta o cômodo já selecionado
+let tapId=null;
 function pDown(e){
   const g=e.target.closest('[data-id]');
-  if(!editPlan){return;}
-  if(!g){selRoom=null;renderPlan();return;}
-  const id=g.dataset.id;const r=S.rooms.find(x=>x.id===id);
-  const p=svgPt(e);
+  if(!editPlan)return;
+  if(!g){tapId='__none';return;}
+  const id=g.dataset.id;
+  if(selRoom!==id){tapId=id;return;}
+  const r=S.rooms.find(x=>x.id===id);const p=svgPt(e);
   drag={id,mode:e.target.dataset.h?'resize':'move',sx:p.x,sy:p.y,o:{...r},moved:false};
-  if(selRoom!==id){selRoom=id;renderPlan();}
   $('plan').setPointerCapture(e.pointerId);
 }
 function pMove(e){
@@ -443,19 +449,19 @@ function pMove(e){
     r.x=Math.max(0,Math.min(100-r.w,snap(drag.o.x+dx)));
     r.y=Math.max(0,Math.min(200,snap(drag.o.y+dy)));
   }else{
-    r.w=Math.max(10,Math.min(100-r.x,snap(drag.o.w+dx)));
-    r.h=Math.max(10,Math.min(200,snap(drag.o.h+dy)));
+    r.w=Math.max(4,Math.min(100-r.x,snap(drag.o.w+dx)));
+    r.h=Math.max(4,Math.min(200,snap(drag.o.h+dy)));
   }
   renderPlan();
 }
 function pUp(e){
-  if(!drag){
-    // clique normal (fora do modo edição)
-    if(!editPlan&&e.type==='pointerup'){const g=e.target.closest('[data-id]');if(g)openRoom(g.dataset.id);}
+  if(drag){if(drag.moved)save();drag=null;return;}
+  if(e.type!=='pointerup'){tapId=null;return;} // rolagem cancela o toque
+  if(editPlan){
+    if(tapId){selRoom=tapId==='__none'?null:tapId;tapId=null;renderPlan();}
     return;
   }
-  if(drag.moved)save();
-  drag=null;
+  const g=e.target.closest('[data-id]');if(g)openRoom(g.dataset.id);
 }
 function addRoom(){
   const name=prompt('Nome do novo cômodo:','Novo cômodo');if(!name)return;
