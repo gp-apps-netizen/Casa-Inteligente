@@ -67,7 +67,15 @@ body.fs .sum{display:none}
 .op.open{stroke:#ef4444!important;stroke-dasharray:none!important;stroke-width:1.6;animation:blink 1.2s infinite}
 .op.lnk{filter:drop-shadow(0 0 1px currentColor)}
 @keyframes blink{50%{opacity:.35}}
-#plan.editing .op{opacity:.35}
+#plan.editing.m-rooms .op{opacity:.35}
+#plan.editing.m-ops .rm{opacity:.55;pointer-events:none}
+.ophit{stroke:transparent;stroke-width:5;stroke-linecap:round;cursor:pointer}
+.ophit.sel{stroke:rgba(59,130,246,.35)}
+#plan .ophit.sel,#plan .oh{touch-action:none}
+.oh{fill:#fff;stroke:var(--acc);stroke-width:.6;cursor:grab}
+.emode{display:flex;gap:6px;width:100%;background:var(--bg);border-radius:12px;padding:4px}
+.emode button{flex:1;border:none!important;background:none!important;color:var(--mut)!important;padding:8px 4px!important}
+.emode button.act{background:var(--card2)!important;color:var(--txt)!important}
 .legend{display:flex;gap:12px;justify-content:center;font-size:11px;color:var(--mut);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
 body.fs .legend{display:none}
@@ -89,7 +97,9 @@ body.fs .fsoff{bottom:calc(10px + env(safe-area-inset-bottom));right:10px}
 .planHint{font-size:12px;color:var(--mut);text-align:center;margin:8px 0 2px}
 .etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .etools.fix{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;z-index:10;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
-body.editing{padding-bottom:170px}
+body.editing{padding-bottom:240px}
+.etools.fix button{padding:9px 4px;font-size:12.5px;flex:1 1 28%}
+.etools.fix .emode button{font-size:13px}
 body.editing .scenes{display:none}
 .etools button{flex:1 1 30%;padding:11px 6px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:600;cursor:pointer}
 .etools button.pri{background:var(--acc);border-color:var(--acc)}
@@ -291,7 +301,7 @@ let demoDevs=[
   {id:'demo-sala',name:'Sala',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'on'}]},
   {id:'demo-corredor',name:'Corredor',online:true,multi:true,uiid:7,ch:[{o:0,s:'off'},{o:1,s:'off'}]}
 ];
-let loading=false,timer=null,openRoomId=null,editPlan=false,selRoom=null,drag=null;
+let loading=false,timer=null,openRoomId=null,editPlan=false,selRoom=null,drag=null,editMode='rooms',selOp=null,tapOp=null;
 
 /* ---------- utilidades ---------- */
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='toast',err?6000:2500);}
@@ -487,7 +497,7 @@ function buildMain(){
     svg.addEventListener('pointerup',pUp);
     svg.addEventListener('pointercancel',pUp);
     svg.addEventListener('contextmenu',ev=>ev.preventDefault());
-    svg.addEventListener('touchstart',ev=>{if(editPlan&&ev.target.closest('.rm.sel'))ev.preventDefault();},{passive:false});
+    svg.addEventListener('touchstart',ev=>{if(editPlan&&(editMode==='rooms'?ev.target.closest('.rm.sel'):ev.target.closest('.ophit.sel,.oh')))ev.preventDefault();},{passive:false});
   }else{
     m.innerHTML=tabs+sc+`<div id="listBox"></div>`;
   }
@@ -499,7 +509,7 @@ function renderPlan(){
   const svg=$('plan');if(!svg)return;
   const H=planH();
   svg.setAttribute('viewBox',`-1 -1 102 ${H+2}`);
-  svg.classList.toggle('editing',editPlan);
+  svg.classList.toggle('editing',editPlan);svg.classList.toggle('m-rooms',editMode==='rooms');svg.classList.toggle('m-ops',editMode==='ops');
   svg.innerHTML=`<defs><radialGradient id="glow"><stop offset="0" stop-color="#fbbf24" stop-opacity=".45"/><stop offset="1" stop-color="#fbbf24" stop-opacity="0"/></radialGradient></defs>`+
   [...S.rooms].sort((a,b)=>(a.id===selRoom)-(b.id===selRoom)).map(r=>{
     const ls=lightsOf(r.id),on=ls.filter(x=>x.c.s==='on').length;
@@ -521,14 +531,23 @@ function renderPlan(){
       ${editPlan&&selRoom===r.id?`<circle class="hdl" data-h="1" cx="${r.x+r.w-.8}" cy="${r.y+r.h-.8}" r="2.4"/>`:''}
     </g>`;
   }).join('')+S.ops.map(o=>{const st=opState(o);
-    return `<line class="op ${o.t}${st==='open'?' open':''}${st?' lnk':''}" x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}"><title>${esc(o.name)}</title></line>`;}).join('');
+    const ed=editPlan&&editMode==='ops',sel=ed&&selOp===o.id;
+    return `<line class="op ${o.t}${st==='open'?' open':''}${st?' lnk':''}" x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}"><title>${esc(o.name)}</title></line>`+
+      (ed?`<line class="ophit${sel?' sel':''}" data-op="${esc(o.id)}" x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}"/>`:'')+
+      (sel?`<circle class="oh" data-oh="1" data-op="${esc(o.id)}" cx="${o.x1}" cy="${o.y1}" r="2"/><circle class="oh" data-oh="2" data-op="${esc(o.id)}" cx="${o.x2}" cy="${o.y2}" r="2"/>`:'');}).join('');
   renderSummary();renderWall();
-  $('pHint').textContent=editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no cômodo para acender/apagar · segure para ver detalhes';
+  const so=S.ops.find(o=>o.id===selOp);
+  $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no cômodo para acender/apagar · segure para ver detalhes';
   const t=$('eTools');
   t.classList.toggle('fix',editPlan);document.body.classList.toggle('editing',editPlan);
   if(editPlan){
+    const modes=`<div class="emode"><button class="${editMode==='rooms'?'act':''}" onclick="setEditMode('rooms')">🏠 Cômodos</button><button class="${editMode==='ops'?'act':''}" onclick="setEditMode('ops')">🚪 Portas e janelas</button></div>`;
+    if(editMode==='ops'){const d=selOp?'':'disabled';
+      t.innerHTML=modes+`<button onclick="addOp('porta')">＋ Porta</button><button onclick="addOp('janela')">＋ Janela</button><button onclick="addOp('portao')">＋ Portão</button><button ${d} onclick="renameOp()">✏️ Nome</button><button ${d} onclick="rotateOp()">↻ Girar</button><button class="dan" ${d} onclick="delOp()">🗑 Excluir</button><button onclick="openOps()">🔗 Sensores</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
+    }else{
     const d=selRoom?'':'disabled';
-    t.innerHTML=`<button onclick="openOps()">🚪 Portas</button><button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
+    t.innerHTML=modes+`<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
+    }
   }else t.innerHTML=`<button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar planta</button>`;
   // luzes sem cômodo
   const un=allCh().filter(x=>!x.room);
@@ -558,7 +577,7 @@ function renderRoomSheet(){
 async function roomAll(st){await setMany(lightsOf(openRoomId),st);}
 
 /* ---------- edição da planta ---------- */
-function toggleEdit(){if(document.body.classList.contains('fs'))toggleFS();editPlan=!editPlan;selRoom=null;save();render();}
+function toggleEdit(){if(document.body.classList.contains('fs'))toggleFS();editPlan=!editPlan;selRoom=null;selOp=null;save();render();}
 function svgPt(e){const svg=$('plan');const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 const snap=v=>Math.round(v/2)*2;
 // Edição: tocar seleciona (a tela continua rolando); só arrasta o cômodo já selecionado
@@ -570,6 +589,15 @@ function pDown(e){
     clearTimeout(press&&press.t);press=null;
     if(g){const id=g.dataset.id;press={id,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);openRoom(id);}},500)};}
     return;
+  }
+  if(editMode==='ops'){
+    const oe=e.target.closest('[data-op]');
+    if(!oe){tapOp='__none';return;}
+    const oid=oe.dataset.op;
+    if(selOp!==oid){tapOp=oid;return;}
+    const o=S.ops.find(x=>x.id===oid);const p=svgPt(e);
+    drag={kind:'op',id:oid,mode:oe.dataset.oh?'p'+oe.dataset.oh:'move',sx:p.x,sy:p.y,o:{...o},moved:false};
+    $('plan').setPointerCapture(e.pointerId);return;
   }
   if(!g){tapId='__none';return;}
   const id=g.dataset.id;
@@ -583,6 +611,23 @@ function pMove(e){
   const p=svgPt(e);const dx=p.x-drag.sx,dy=p.y-drag.sy;
   if(Math.abs(dx)+Math.abs(dy)>1)drag.moved=true;
   if(!drag.moved)return;
+  if(drag.kind==='op'){
+    const o=S.ops.find(x=>x.id===drag.id),s=drag.o,sn=v=>Math.round(v*2)/2,H=planH();
+    const cl=(v,mx)=>Math.max(0,Math.min(mx,v));
+    if(drag.mode==='move'){
+      let ddx=sn(dx),ddy=sn(dy);
+      ddx=Math.max(-Math.min(s.x1,s.x2),Math.min(100-Math.max(s.x1,s.x2),ddx));
+      ddy=Math.max(-Math.min(s.y1,s.y2),Math.min(H-Math.max(s.y1,s.y2),ddy));
+      o.x1=s.x1+ddx;o.x2=s.x2+ddx;o.y1=s.y1+ddy;o.y2=s.y2+ddy;
+    }else{
+      const k=drag.mode==='p1'?'1':'2',ok=k==='1'?'2':'1';
+      let x=cl(sn(p.x),100),y=cl(sn(p.y),H);
+      // mantém reto (horizontal ou vertical)
+      if(Math.abs(x-o['x'+ok])<Math.abs(y-o['y'+ok]))x=o['x'+ok];else y=o['y'+ok];
+      o['x'+k]=x;o['y'+k]=y;
+    }
+    renderPlan();return;
+  }
   const r=S.rooms.find(x=>x.id===drag.id);
   if(drag.mode==='move'){
     r.x=Math.max(0,Math.min(100-r.w,snap(drag.o.x+dx)));
@@ -595,8 +640,9 @@ function pMove(e){
 }
 function pUp(e){
   if(drag){if(drag.moved)save();drag=null;return;}
-  if(e.type!=='pointerup'){tapId=null;cancelPress();return;} // rolagem cancela o toque
+  if(e.type!=='pointerup'){tapId=null;tapOp=null;cancelPress();return;} // rolagem cancela o toque
   if(editPlan){
+    if(editMode==='ops'){if(tapOp){selOp=tapOp==='__none'?null:tapOp;tapOp=null;renderPlan();}return;}
     if(tapId){selRoom=tapId==='__none'?null:tapId;tapId=null;renderPlan();}
     return;
   }
@@ -759,6 +805,28 @@ async function toggleFS(){
   renderPlan();
 }
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs')){document.body.classList.remove('fs');if(wakeLock){wakeLock.release();wakeLock=null;}renderPlan();}});
+function setEditMode(m){editMode=m;selRoom=null;selOp=null;renderPlan();}
+function addOp(t){
+  const nm={porta:'Nova porta',janela:'Nova janela',portao:'Novo portão'}[t];
+  const name=prompt('Nome:',nm);if(name===null)return;
+  const svg=$('plan'),rc=svg.getBoundingClientRect();
+  // coloca no meio da parte visível da planta
+  const vt=Math.max(rc.top,0),vb=Math.min(rc.bottom,innerHeight-240);
+  const pt=svg.createSVGPoint();pt.x=rc.left+rc.width/2;pt.y=(vt+vb)/2;
+  const c=pt.matrixTransform(svg.getScreenCTM().inverse());
+  const L=t==='portao'?10:7,x=Math.round(Math.max(0,Math.min(100-L,c.x-L/2))*2)/2,y=Math.round(c.y*2)/2;
+  const id='o'+Date.now().toString(36);
+  S.ops.push({id,name:(name||nm).trim(),t,x1:x,y1:y,x2:x+L,y2:y});
+  selOp=id;save();renderPlan();toast('Arraste para o lugar certo');
+}
+function renameOp(){const o=S.ops.find(x=>x.id===selOp);if(!o)return;const n=prompt('Nome:',o.name);if(n&&n.trim()){o.name=n.trim();save();renderPlan();}}
+function rotateOp(){
+  const o=S.ops.find(x=>x.id===selOp);if(!o)return;
+  const cx=(o.x1+o.x2)/2,cy=(o.y1+o.y2)/2,L=Math.hypot(o.x2-o.x1,o.y2-o.y1)/2;
+  if(o.y1===o.y2){o.x1=o.x2=cx;o.y1=cy-L;o.y2=cy+L;}else{o.y1=o.y2=cy;o.x1=Math.max(0,cx-L);o.x2=Math.min(100,cx+L);}
+  save();renderPlan();
+}
+function delOp(){const o=S.ops.find(x=>x.id===selOp);if(!o||!confirm(`Excluir "${o.name}"?`))return;S.ops=S.ops.filter(x=>x.id!==selOp);delete S.opSensor[selOp];selOp=null;save();renderPlan();}
 function addRoom(){
   const name=prompt('Nome do novo cômodo:','Novo cômodo');if(!name)return;
   const id='r'+Date.now().toString(36);
