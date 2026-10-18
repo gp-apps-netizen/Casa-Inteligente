@@ -13,7 +13,7 @@
 :root{--bg:#0b1120;--card:#141c2f;--card2:#1b2540;--txt:#e8edf7;--mut:#8b97b3;--on:#fbbf24;--onbg:#3a2f12;--ok:#22c55e;--err:#ef4444;--acc:#3b82f6;--line:#26314d}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-body{padding:env(safe-area-inset-top) 16px calc(96px + env(safe-area-inset-bottom))}
+body{padding:env(safe-area-inset-top) 16px calc(92px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;gap:10px;padding:16px 0 8px;position:sticky;top:0;background:var(--bg);z-index:5}
 header h1{font-size:20px;margin:0;flex:1}
 .st{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px}
@@ -42,7 +42,7 @@ header h1{font-size:20px;margin:0;flex:1}
 #plan{width:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;max-height:calc(100dvh - 510px)}
 #plan.editing{max-height:none}
 .fsx,.fsoff{display:none}
-body.fs header,body.fs .st,body.fs .tabs,body.fs .scenes,body.fs #pHint,body.fs #eTools,body.fs #unassigned,body.fs .bar{display:none!important}
+body.fs header,body.fs .st,body.fs .tabs,body.fs .bnav,body.fs .scenes,body.fs #pHint,body.fs #eTools,body.fs #unassigned,body.fs .bar{display:none!important}
 body.fs{overflow:hidden}
 body.fs .planWrap{position:fixed;inset:0;z-index:15;border:none;border-radius:0;background:var(--bg);padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 body.fs #plan{width:100%;flex:1;min-height:0;height:auto;max-height:none}
@@ -115,6 +115,7 @@ body.fs .wsc{padding-left:60px}
 .etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .etools.fix{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;z-index:10;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
 body.editing{padding-bottom:240px}
+body.editing .bnav{display:none}
 .etools.fix button{padding:9px 4px;font-size:12.5px;flex:1 1 28%}
 .etools.fix .emode button{font-size:13px}
 body.editing .scenes{display:none}
@@ -139,7 +140,7 @@ body.editing .scenes{display:none}
 label{display:block;font-size:12px;color:var(--mut);margin:12px 0 6px}
 input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:15px}
 .hint{font-size:12px;color:var(--mut);line-height:1.5;margin-top:8px}
-.toast{position:fixed;left:16px;right:16px;bottom:90px;background:#1f2937;border:1px solid var(--line);padding:12px 14px;border-radius:12px;font-size:13px;display:none;z-index:30;line-height:1.4}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));background:#1f2937;border:1px solid var(--line);padding:12px 14px;border-radius:12px;font-size:13px;display:none;z-index:30;line-height:1.4}
 .toast.show{display:block}.toast.err{border-color:var(--err)}
 .row{display:flex;gap:10px}.row>*{flex:1}
 .tt{display:flex;justify-content:space-between;align-items:flex-start}
@@ -169,18 +170,64 @@ body.fs .plans{display:none}
 .chk input{width:20px;height:20px;flex:none}
 .chk small{color:var(--mut);display:block}
 .empty{color:var(--mut);font-size:14px;line-height:1.5;padding:8px 0 4px}
+/* navegação inferior */
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:12;display:flex;background:rgba(14,20,36,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.bnav button{flex:1;background:none;border:none;color:var(--mut);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;cursor:pointer}
+.bnav button span{font-size:21px;line-height:1;filter:grayscale(1) opacity(.7);transition:.2s}
+.bnav button.act{color:var(--txt)}
+.bnav button.act span{filter:none;transform:translateY(-1px)}
+.bnav button.act::after{content:'';width:18px;height:3px;border-radius:2px;background:var(--acc);margin-top:1px}
+.ptools{display:flex;gap:8px;margin-top:10px}
+.ptools button{flex:1;padding:11px 6px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:600;cursor:pointer}
+/* cenas */
+.scgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.sccard{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 14px;min-height:118px;text-align:left;color:var(--txt);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;transition:transform .12s}
+.sccard:active{transform:scale(.97)}
+.sccard .ic{font-size:30px}
+.sccard b{font-size:15px;margin-top:10px;display:block}
+.sccard small{color:var(--mut);font-size:12px}
+.sccard .ed{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.06);border:none;color:var(--mut);border-radius:10px;padding:6px 8px;font-size:13px;cursor:pointer}
+.sccard.new{border-style:dashed;align-items:center;justify-content:center;color:var(--mut);text-align:center}
+.sccard.run{border-color:var(--acc);box-shadow:0 0 0 2px rgba(59,130,246,.35)}
+/* filtros */
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:4px 0 6px}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;background:none;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chips button.act{background:var(--card2);color:var(--txt);border-color:#3a4870}
+/* ajustes */
+.sgrp{margin:18px 0 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.slist{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.srow{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--txt);background:none;width:100%;text-align:left;font-size:15px;border-left:none;border-right:none;border-top:none}
+.srow:last-child{border-bottom:none}
+.srow .si{font-size:20px;width:26px;text-align:center;flex:none}
+.srow .st2{flex:1;min-width:0}
+.srow .st2 small{display:block;color:var(--mut);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .ch{color:var(--mut);font-size:18px}
+.srow.dan{color:#fca5a5}
+.sw{position:relative;width:46px;height:28px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw i{position:absolute;inset:0;background:#2a3554;border-radius:999px;transition:.2s}
+.sw i::after{content:'';position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+i{background:var(--ok)}
+.sw input:checked+i::after{transform:translateX(18px)}
+.ver{text-align:center;color:var(--mut);font-size:12px;margin:22px 0 8px}
 </style>
 </head>
 <body>
 <header>
-  <h1>🏠 Casa Inteligente</h1>
+  <h1 id="hTitle">🏠 Casa Inteligente</h1>
   <button class="ib" id="bMic" title="Comando de voz" onclick="openVoice(true)">🎤</button>
   <button class="ib" id="bRef" title="Atualizar"><span>⟳</span></button>
-  <button class="ib" id="bCfg" title="Configurações">⚙</button>
 </header>
 <div class="st"><span class="dot" id="dot"></span><span id="stTxt">Não conectado</span><span class="wk" id="wk" onclick="toggleWake()"></span></div>
 <main id="main"></main>
-<div class="bar" id="bar" style="display:none"><button class="btn sec" id="bAllOff">🌙 Apagar tudo</button></div>
+<nav class="bnav" id="bnav">
+  <button data-v="plan" onclick="setView('plan')"><span>🏠</span>Casa</button>
+  <button data-v="scenes" onclick="setView('scenes')"><span>🎬</span>Cenas</button>
+  <button data-v="list" onclick="setView('list')"><span>💡</span>Aparelhos</button>
+  <button data-v="settings" onclick="setView('settings')"><span>⚙️</span>Ajustes</button>
+</nav>
+<input type="file" id="fImport" accept=".json,application/json" style="display:none">
 
 <!-- Cômodo -->
 <div class="ov" id="ovRoom"><div class="sheet">
@@ -198,10 +245,7 @@ body.fs .plans{display:none}
 
 <!-- Configurações -->
 <div class="ov" id="ovCfg"><div class="sheet">
-  <h3>⚙ Configurações</h3>
-  <button class="btn sec" id="bDevs">🔌 Interruptores e aparelhos</button>
-  <button class="btn sec" onclick="closeCfg();openScenes()">🎬 Cenas</button>
-  <button class="btn sec" onclick="closeCfg();openOps()">🚪 Portas e janelas</button>
+  <div class="sh"><h3>🔗 Conta eWeLink</h3><button class="x" onclick="closeCfg()">✕</button></div>
   <label>App ID (eWeLink Developer)</label>
   <input id="cAppId" autocomplete="off" placeholder="Cole o APPID aqui">
   <label>App Secret</label>
@@ -213,8 +257,6 @@ body.fs .plans{display:none}
     <button class="btn" id="bLogin">Salvar e entrar com eWeLink</button>
     <button class="btn sec" id="bDemo">Usar modo demonstração</button>
     <button class="btn dan" id="bLogout">Sair da conta eWeLink</button>
-    <button class="btn sec" id="bResetPlan">Restaurar planta padrão</button>
-    <button class="btn sec" id="bCloseCfg">Fechar</button>
   </div>
 </div></div>
 
@@ -507,28 +549,33 @@ function tile(x){
   return `<div class="${cls}" role="button" onclick="toggle('${esc(x.dev.id)}',${x.c.o})"><div class="tt">${icon(chType(x))}<span class="tm${t?' act':''}" onclick="event.stopPropagation();openTimer('${esc(x.key)}')">⏱</span></div><div><div class="n">${esc(chName(x.dev,x.c.o))}</div><div class="s">${!x.dev.online?'Offline':stLabel(x)}${t?` · ${t.to==='off'?'desliga':'liga'} em <span data-tk="${esc(x.key)}">${fmtLeft(t.at)}</span>`:''}</div></div></div>`;
 }
 
+const VIEWS={plan:'🏠 '+'Casa Inteligente',scenes:'🎬 Cenas',list:'💡 Aparelhos',settings:'⚙️ Ajustes'};
 function render(){
   const m=$('main');
+  if(!VIEWS[S.view])S.view='plan';
   if(S.demo)setStatus('demo','Modo demonstração');
   else if(!logged())setStatus('','Não conectado');
-  if(!S.demo&&!logged()){
-    $('bar').style.display='none';
+  $('hTitle').textContent=VIEWS[S.view];
+  document.querySelectorAll('#bnav button').forEach(b=>b.classList.toggle('act',b.dataset.v===S.view));
+  if(!S.demo&&!logged()&&S.view!=='settings'){
+    m.dataset.view='';
     m.innerHTML=`<div class="welcome"><h2>Bem-vindo! 👋</h2>
       <p>Controle as luzes dos seus interruptores Sonoff pelo celular. Para conectar, configure sua conta de desenvolvedor do eWeLink.</p>
       <button class="btn" onclick="openCfg()">Configurar eWeLink</button>
       <button class="btn sec" onclick="setDemo(true)">Ver demonstração</button></div>`;
     return;
   }
-  $('bar').style.display=editPlan?'none':'block';
-  if(!m.querySelector('.tabs')||m.dataset.view!==S.view||m.dataset.edit!==String(editPlan))buildMain();
-  renderScenes();renderPlans();
-  if(S.view==='plan')renderPlan();else renderList();
+  if(m.dataset.view!==S.view||m.dataset.edit!==String(editPlan))buildMain();
+  if(S.view==='plan'){renderScenes();renderPlans();renderPlan();}
+  else if(S.view==='list')renderList();
+  else if(S.view==='scenes')renderScenesScreen();
+  else renderSettings();
   if(openRoomId)renderRoomSheet();
 }
 function buildMain(){
   const m=$('main');m.dataset.view=S.view;m.dataset.edit=String(editPlan);
-  const tabs=`<div class="tabs"><button class="${S.view==='plan'?'act':''}" onclick="setView('plan')">🏠 Planta</button><button class="${S.view==='list'?'act':''}" onclick="setView('list')">☰ Lista</button></div>`;
-  const sc=`<div class="scenes" id="scenes"></div>`+(S.view==='plan'?`<div class="plans" id="plans"></div>`:'');
+  const tabs='';
+  const sc=`<div class="plans" id="plans" style="margin-top:12px"></div><div class="scenes" id="scenes"></div>`;
   if(S.view==='plan'){
     m.innerHTML=tabs+sc+`<div class="sum" id="sum"></div><div class="planWrap"><button class="fsx" onclick="toggleFS()" title="Sair da tela cheia">✕</button><button class="fsoff" onclick="allOff()" title="Apagar tudo">🌙</button><button class="fsmic" onclick="openVoice(true)" title="Comando de voz">🎤</button><div class="wkfs" id="wkfs"></div>
       <div class="wall" id="wallTop"><div><div id="wClock">--:--</div><div id="wDate"></div></div><div id="wWeather"></div></div>
@@ -544,11 +591,15 @@ function buildMain(){
     svg.addEventListener('pointercancel',pUp);
     svg.addEventListener('contextmenu',ev=>ev.preventDefault());
     svg.addEventListener('touchstart',ev=>{if(editPlan&&(editMode==='rooms'?ev.target.closest('.rm.sel'):ev.target.closest('.ophit.sel,.oh')))ev.preventDefault();},{passive:false});
+  }else if(S.view==='list'){
+    m.innerHTML=`<div class="sum" id="sum" style="margin-top:12px"></div><div class="chips" id="lFilter"></div><div id="listBox"></div><button class="btn sec" style="margin-top:6px" onclick="allOff()">🌙 Desligar tudo</button>`;
+  }else if(S.view==='scenes'){
+    m.innerHTML=`<div class="hint" style="margin-top:12px">Toque para ativar · ✏️ para editar</div><div class="scgrid" id="scGrid"></div>`;
   }else{
-    m.innerHTML=tabs+sc+`<div id="listBox"></div>`;
+    m.innerHTML=`<div id="setBox"></div>`;
   }
 }
-function setView(v){S.view=v;editPlan=false;selRoom=null;save();render();}
+function setView(v){if(document.body.classList.contains('fs'))toggleFS();S.view=v;editPlan=false;selRoom=null;selOp=null;save();render();scrollTo(0,0);}
 
 function planH(){return Math.max(40,...S.rooms.map(r=>r.y+r.h));}
 function renderPlan(){
@@ -594,21 +645,83 @@ function renderPlan(){
     const d=selRoom?'':'disabled';
     t.innerHTML=modes+`<button onclick="renamePlan()">📝 Planta</button>${S.plans.length>1?'<button class="dan" onclick="delPlan()">🗑 Planta</button>':''}<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
     }
-  }else t.innerHTML=`<button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar planta</button>`;
+  }else t.innerHTML=`<button onclick="allOff()">🌙 Apagar tudo</button><button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar</button>`;
   // luzes sem cômodo
   const un=allCh().filter(x=>!x.room);
   $('unassigned').innerHTML=un.length&&!editPlan?`<section class="room"><div class="rh"><h2>Sem cômodo<small>vincule em Editar planta → Luzes</small></h2></div><div class="grid">${un.map(tile).join('')}</div></section>`:'';
 }
 function renderList(){
   const box=$('listBox');if(!box)return;
-  const ch=allCh();
+  renderSummary();
+  const all=allCh();const f=S.listFilter||'all';
+  const types=[...new Set(all.map(chType))];
+  const fl=$('lFilter');
+  if(fl)fl.innerHTML=[['all','Todos'],['on','Ligados'],['off','Desligados']].concat(types.length>1?types.map(t=>['t:'+t,TYPES[t][0]]):[]).map(([k,v])=>`<button class="${f===k?'act':''}" onclick="S.listFilter='${k}';save();renderList()">${v}</button>`).join('');
+  const ch=all.filter(x=>f==='all'||(f==='on'&&x.c.s==='on')||(f==='off'&&x.c.s!=='on')||(f.startsWith('t:')&&chType(x)===f.slice(2)));
+  if(all.length&&!ch.length){box.innerHTML=`<div class="empty" style="text-align:center;padding:30px 0">Nada aqui com esse filtro.</div>`;return;}
   if(!ch.length){box.innerHTML=`<div class="welcome"><h2>Nenhum interruptor encontrado</h2><p>Confira se os interruptores estão na mesma conta do eWeLink usada no login.</p></div>`;return;}
   const multi=S.plans.length>1;
   const secs=S.plans.flatMap(p=>p.rooms.map(r=>({name:(multi?p.name+' · ':'')+r.name,ls:ch.filter(x=>x.room===r.id)}))).filter(g=>g.ls.length);
   const un=ch.filter(x=>!x.room);if(un.length)secs.push({name:'Sem cômodo',ls:un});
   box.innerHTML=secs.map(g=>{const on=g.ls.filter(x=>x.c.s==='on').length;
-    return `<section class="room"><div class="rh"><h2>${esc(g.name)}<small>${on?on+' acesa(s)':'tudo apagado'}</small></h2></div><div class="grid">${g.ls.map(tile).join('')}</div></section>`;}).join('');
+    return `<section class="room"><div class="rh"><h2>${esc(g.name)}<small>${on?on+' ligado(s)':'tudo desligado'}</small></h2></div><div class="grid">${g.ls.map(tile).join('')}</div></section>`;}).join('');
 }
+/* ---------- tela de cenas ---------- */
+function sceneSummary(sc){const ch=allCh();const on=ch.filter(x=>sceneAct(sc,x)==='on').length,off=ch.filter(x=>sceneAct(sc,x)==='off').length;
+  return [on?`liga ${on}`:'',off?`desliga ${off}`:''].filter(Boolean).join(' · ')||'nenhuma ação';}
+function renderScenesScreen(){
+  const g=$('scGrid');if(!g)return;
+  g.innerHTML=S.scenes.map(s=>`<div class="sccard" role="button" data-sc="${esc(s.id)}" onclick="tapScene('${esc(s.id)}')"><button class="ed" onclick="event.stopPropagation();editScene('${esc(s.id)}')">✏️</button><span class="ic">${esc(s.ic||'🎬')}</span><div><b>${esc(s.name)}</b><small>${sceneSummary(s)}</small></div></div>`).join('')+
+    `<div class="sccard new" role="button" onclick="editScene(null)"><span class="ic">＋</span><b>Nova cena</b></div>`;
+}
+async function tapScene(id){const el=document.querySelector(`[data-sc="${id}"]`);if(el)el.classList.add('run');await runScene(id);setTimeout(()=>{if(el)el.classList.remove('run');},700);}
+/* ---------- tela de ajustes ---------- */
+const sw=(id,on,fn)=>`<label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="${id}" ${on?'checked':''} onchange="${fn}"><i></i></label>`;
+const srow=(ic,t,sub,fn,extra='',cls='')=>`<button class="srow ${cls}" onclick="${fn}"><span class="si">${ic}</span><span class="st2">${t}${sub?`<small>${sub}</small>`:''}</span>${extra||'<span class="ch">›</span>'}</button>`;
+function renderSettings(){
+  const b=$('setBox');if(!b)return;
+  const conn=S.demo?'Modo demonstração':logged()?`Conectado · ${devices.length} interruptor(es)`:'Não conectado';
+  const ch=allCh();
+  b.innerHTML=`
+  <div class="sgrp">Conta</div><div class="slist">
+    ${srow('🔗','Conta eWeLink',conn,'openCfg()')}
+    ${srow('🧪','Modo demonstração',S.demo?'Ligado: aparelhos de exemplo':'Testar o app sem conectar','',sw('swDemo',S.demo,'setDemo(this.checked)'))}
+  </div>
+  <div class="sgrp">Casa</div><div class="slist">
+    ${srow('🔌','Interruptores e aparelhos',`${ch.length} aparelho(s) · nomes, tipos e cômodos`,'openDevs()')}
+    ${srow('🚪','Portas e janelas',`${S.ops.length} item(ns) · sensores de abertura`,'openOps()')}
+    ${S.plans.map(p=>srow(esc(p.ic||'🏠'),esc(p.name)+(p.id===S.curPlan?' <small style="display:inline;color:var(--acc)">· atual</small>':''),`${p.rooms.length} cômodo(s) · toque para editar`,`editPlanFromSettings('${esc(p.id)}')`)).join('')}
+    ${srow('＋','Nova planta','Outro andar, casa de praia, sítio…','newPlan()')}
+  </div>
+  <div class="sgrp">Voz e painel</div><div class="slist">
+    ${srow('🎤','Ativar com "OK Casa"','Escuta contínua com o app aberto','',sw('swWake',S.wake,'setWake(this.checked)'))}
+    ${srow('🔊','Responder em voz alta','O app fala o resultado do comando','',sw('swSpeak',S.voiceSpeak,'S.voiceSpeak=this.checked;save()'))}
+    ${srow('🖥️','Painel de parede','Planta em tela cheia com relógio e clima',"setView('plan');setTimeout(toggleFS,50)")}
+    ${srow('🌤️','Clima no painel',S.geo?'Localização salva':'Toque para permitir a localização','askGeo()')}
+  </div>
+  <div class="sgrp">Dados</div><div class="slist">
+    ${srow('💾','Exportar backup','Salva plantas, cenas e ajustes em um arquivo','exportBackup()')}
+    ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
+    ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
+  </div>
+  <div class="ver">Casa Inteligente · v11</div>`;
+}
+function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
+function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
+function exportBackup(){
+  syncPlan();const o={...S};['rooms','ops','at','rt','atExp','secret'].forEach(k=>delete o[k]);
+  const blob=new Blob([JSON.stringify({app:'casa-inteligente',v:11,data:o},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='casa-inteligente-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Backup exportado (sem senhas/tokens)');
+}
+$('fImport').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const j=JSON.parse(await f.text());const d=j.data||j;if(!Array.isArray(d.plans))throw 0;
+    if(!confirm('Substituir plantas, cenas e ajustes por este backup?'))return;
+    const keep={appId:S.appId,secret:S.secret,at:S.at,rt:S.rt,atExp:S.atExp,region:S.region};
+    S=Object.assign({},S,d,keep);loadPlan();save();render();toast('Backup restaurado ✅');
+  }catch(_){toast('Arquivo de backup inválido.',1);}
+};
 
 /* ---------- cômodo (sheet) ---------- */
 function openRoom(id){openRoomId=id;renderRoomSheet();$('ovRoom').classList.add('show');}
@@ -718,7 +831,7 @@ function newPlan(){
   const ic=prompt('Ícone (emoji):','🏡')||'🏡';
   syncPlan();const id='p'+Date.now().toString(36);
   S.plans.push({id,name:name.trim(),ic:ic.trim().slice(0,4),rooms:blankRooms(),ops:[]});
-  S.curPlan=id;loadPlan();editPlan=true;editMode='rooms';selRoom=null;save();render();
+  S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();
   toast('Planta criada. Monte os cômodos e toque em Concluir.');
 }
 function renamePlan(){const p=curPlan();const n=prompt('Nome da planta:',p.name);if(!n||!n.trim())return;const ic=prompt('Ícone (emoji):',p.ic||'🏠');p.name=n.trim();if(ic)p.ic=ic.trim().slice(0,4);save();render();}
@@ -826,7 +939,7 @@ setInterval(tickTimers,1000);
 function sceneAct(sc,x){const a=sc.acts||{};if(a[x.key])return a[x.key];if(x.room&&a['room:'+x.room])return a['room:'+x.room];return a['*']||null;}
 function renderScenes(){
   const el=$('scenes');if(!el)return;
-  el.innerHTML=S.scenes.map(s=>`<button class="sc" onclick="runScene('${esc(s.id)}')">${esc(s.ic||'🎬')} ${esc(s.name)}</button>`).join('')+`<button class="sc add" onclick="openScenes()">✏️ Cenas</button>`;
+  el.innerHTML=S.scenes.map(s=>`<button class="sc" onclick="runScene('${esc(s.id)}')">${esc(s.ic||'🎬')} ${esc(s.name)}</button>`).join('')+`<button class="sc add" onclick="setView('scenes')">＋ Cenas</button>`;
 }
 async function runScene(id){
   const sc=S.scenes.find(s=>s.id===id);if(!sc)return;
@@ -836,7 +949,8 @@ async function runScene(id){
   await setMany(off,'off');await setMany(on,'on');
   toast(`${sc.ic||'🎬'} ${sc.name} ativada`);
 }
-function openScenes(){
+function openScenes(){setView('scenes');}
+function openScenesOld(){
   $('scList').innerHTML=S.scenes.length?S.scenes.map(s=>`<div class="scitem"><span style="font-size:20px">${esc(s.ic||'🎬')}</span><b>${esc(s.name)}</b><button onclick="runScene('${esc(s.id)}')">▶</button><button onclick="editScene('${esc(s.id)}')">✏️</button></div>`).join(''):`<div class="empty">Nenhuma cena ainda.</div>`;
   $('ovScenes').classList.add('show');
 }
@@ -858,9 +972,9 @@ $('seSave').onclick=()=>{
   const ic=$('seIc').value.trim()||'🎬';
   if(seId){Object.assign(S.scenes.find(s=>s.id===seId),{name,ic,acts});}
   else S.scenes.push({id:'s'+Date.now().toString(36),name,ic,acts});
-  save();$('ovScene').classList.remove('show');openScenes();render();toast('Cena salva ✅');
+  save();$('ovScene').classList.remove('show');render();toast('Cena salva ✅');
 };
-$('seDel').onclick=()=>{if(!confirm('Excluir esta cena?'))return;S.scenes=S.scenes.filter(s=>s.id!==seId);save();$('ovScene').classList.remove('show');openScenes();render();};
+$('seDel').onclick=()=>{if(!confirm('Excluir esta cena?'))return;S.scenes=S.scenes.filter(s=>s.id!==seId);save();$('ovScene').classList.remove('show');render();};
 
 /* ---------- comando de voz ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1134,15 +1248,11 @@ function closeCfg(){$('ovCfg').classList.remove('show');}
 function readCfg(){S.appId=$('cAppId').value.trim();S.secret=$('cSecret').value.trim();S.redirect=$('cRedir').value.trim()||defRedirect;save();}
 function setDemo(v){S.demo=v;save();closeCfg();render();if(!v)loadDevices();}
 
-$('bCfg').onclick=openCfg;
-$('bCloseCfg').onclick=closeCfg;
-$('bDevs').onclick=openDevs;
 $('bLogin').onclick=()=>{readCfg();login();};
 $('bDemo').onclick=()=>setDemo(true);
 $('bLogout').onclick=()=>{if(!confirm('Sair da conta eWeLink neste aparelho?'))return;S.at='';S.rt='';S.atExp=0;save();devices=[];closeCfg();render();};
-$('bResetPlan').onclick=()=>{if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();closeCfg();render();};
+const _oldReset=()=>{if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();closeCfg();render();};
 $('bRef').onclick=()=>{if(S.demo){toast('Modo demonstração');return;}loadDevices();};
-$('bAllOff').onclick=allOff;
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o){o.classList.remove('show');if(o.id==='ovRoom')openRoomId=null;}}));
 
 /* ---------- atualização automática ---------- */
