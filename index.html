@@ -82,6 +82,23 @@ body.fs .legend{display:none}
 body.fs .fsx,body.fs .fsoff{display:grid;position:fixed;z-index:16;width:44px;height:44px;border-radius:50%;place-items:center;font-size:18px;background:rgba(20,28,47,.85);border:1px solid var(--line);color:var(--txt);cursor:pointer}
 body.fs .fsx{top:calc(10px + env(safe-area-inset-top));right:10px}
 body.fs .fsoff{bottom:calc(10px + env(safe-area-inset-bottom));right:10px}
+.fsmic{display:none}
+.wk{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--mut);cursor:pointer;white-space:nowrap}
+.wk.on{border-color:var(--ok);color:var(--ok)}
+.wk.on::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;animation:blink 1.6s infinite}
+body.fs .wkfs{display:block}
+.wkfs{display:none;position:fixed;z-index:16;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));font-size:12px;color:var(--ok);background:rgba(20,28,47,.85);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+body.fs .fsmic{display:grid;position:fixed;z-index:16;left:10px;bottom:calc(10px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;place-items:center;font-size:22px;background:var(--acc);border:none;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(59,130,246,.5)}
+body.fs .wsc{padding-left:60px}
+.vmic{width:110px;height:110px;border-radius:50%;border:none;background:var(--card2);font-size:46px;display:grid;place-items:center;margin:10px auto 14px;cursor:pointer;transition:.2s}
+.vmic.on{background:var(--acc);box-shadow:0 0 0 0 rgba(59,130,246,.6);animation:pulse 1.4s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 22px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
+.vtxt{text-align:center;font-size:18px;font-weight:600;min-height:26px}
+.vres{text-align:center;color:var(--mut);font-size:14px;margin-top:8px;min-height:20px;line-height:1.4}
+.vres.ok{color:var(--ok)}.vres.err{color:#fca5a5}
+.vex{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+.vex span{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--mut);cursor:pointer}
+.vtype{display:flex;gap:8px;margin-top:14px}.vtype input{flex:1}.vtype button{flex:none;padding:0 16px;border-radius:12px;border:none;background:var(--acc);color:#fff;font-weight:600}
 #plan .rm.sel{touch-action:none}
 .rm rect.b{fill:var(--card2);stroke:#3a4870;stroke-width:.6;transition:fill .3s,stroke .3s}
 .rm.nolight rect.b{fill:#111829;stroke-dasharray:1.5 1}
@@ -157,10 +174,11 @@ body.fs .plans{display:none}
 <body>
 <header>
   <h1>🏠 Casa Inteligente</h1>
+  <button class="ib" id="bMic" title="Comando de voz" onclick="openVoice(true)">🎤</button>
   <button class="ib" id="bRef" title="Atualizar"><span>⟳</span></button>
   <button class="ib" id="bCfg" title="Configurações">⚙</button>
 </header>
-<div class="st"><span class="dot" id="dot"></span><span id="stTxt">Não conectado</span></div>
+<div class="st"><span class="dot" id="dot"></span><span id="stTxt">Não conectado</span><span class="wk" id="wk" onclick="toggleWake()"></span></div>
 <main id="main"></main>
 <div class="bar" id="bar" style="display:none"><button class="btn sec" id="bAllOff">🌙 Apagar tudo</button></div>
 
@@ -205,6 +223,19 @@ body.fs .plans{display:none}
   <div class="sh"><h3>🔌 Interruptores e luzes</h3><button class="x" onclick="$('ovDevs').classList.remove('show')">✕</button></div>
   <div id="dBody"></div>
   <div style="margin-top:16px"><button class="btn" id="bDevsSave">Salvar</button></div>
+</div></div>
+
+<!-- Voz -->
+<div class="ov" id="ovVoice"><div class="sheet">
+  <div class="sh"><h3>🎤 Comando de voz</h3><button class="x" onclick="closeVoice()">✕</button></div>
+  <button class="vmic" id="vMic" onclick="toggleListen()">🎤</button>
+  <div class="vtxt" id="vTxt">Toque no microfone e fale</div>
+  <div class="vres" id="vRes"></div>
+  <div class="vex" id="vEx"></div>
+  <div class="vtype"><input id="vIn" placeholder="…ou digite o comando" enterkeyhint="send"><button onclick="typedCmd()">OK</button></div>
+  <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px"><input type="checkbox" id="vSpeak" style="width:auto"> Responder em voz alta</label>
+  <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px"><input type="checkbox" id="vWake" style="width:auto"> Ativar falando <b>"OK Casa"</b> (escuta contínua)</label>
+  <div class="hint">Com "OK Casa" ligado, o app fica ouvindo enquanto estiver aberto na tela. Ex.: <i>"OK Casa, apagar a luz da sala"</i>. Funciona melhor no modo Tela cheia (painel de parede).</div>
 </div></div>
 
 <!-- Portas e janelas -->
@@ -499,7 +530,7 @@ function buildMain(){
   const tabs=`<div class="tabs"><button class="${S.view==='plan'?'act':''}" onclick="setView('plan')">🏠 Planta</button><button class="${S.view==='list'?'act':''}" onclick="setView('list')">☰ Lista</button></div>`;
   const sc=`<div class="scenes" id="scenes"></div>`+(S.view==='plan'?`<div class="plans" id="plans"></div>`:'');
   if(S.view==='plan'){
-    m.innerHTML=tabs+sc+`<div class="sum" id="sum"></div><div class="planWrap"><button class="fsx" onclick="toggleFS()" title="Sair da tela cheia">✕</button><button class="fsoff" onclick="allOff()" title="Apagar tudo">🌙</button>
+    m.innerHTML=tabs+sc+`<div class="sum" id="sum"></div><div class="planWrap"><button class="fsx" onclick="toggleFS()" title="Sair da tela cheia">✕</button><button class="fsoff" onclick="allOff()" title="Apagar tudo">🌙</button><button class="fsmic" onclick="openVoice(true)" title="Comando de voz">🎤</button><div class="wkfs" id="wkfs"></div>
       <div class="wall" id="wallTop"><div><div id="wClock">--:--</div><div id="wDate"></div></div><div id="wWeather"></div></div>
       <svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="wall wsc" id="wallScenes"></div>
@@ -831,6 +862,179 @@ $('seSave').onclick=()=>{
 };
 $('seDel').onclick=()=>{if(!confirm('Excluir esta cena?'))return;S.scenes=S.scenes.filter(s=>s.id!==seId);save();$('ovScene').classList.remove('show');openScenes();render();};
 
+/* ---------- comando de voz ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false;
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const STOP=new Set('a o as os da do das dos de e em no na nos nas luz luzes lampada lampadas por favor pra para por me agora todo toda o um uma ai la ali aqui ligada ligado acesa aceso'.split(' '));
+const stem=w=>w.length>4?w.replace(/(oes|aes|as|os|es|a|o|s)$/,''):w;
+const toks=s=>norm(s).split(' ').filter(w=>w&&!STOP.has(w)).map(stem);
+const NUMW={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,quinze:15,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,meia:30};
+function speak(t){
+  if(!S.voiceSpeak||!window.speechSynthesis)return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='pt-BR';speechSynthesis.speak(u);}catch(_){}
+}
+function voiceExamples(){
+  const ch=allCh();const ex=['Apagar tudo','O que está ligado?'];
+  if(ch[0])ex.push('Acender '+chName(ch[0].dev,ch[0].c.o).toLowerCase());
+  if(ch[1])ex.push('Desligar '+chName(ch[1].dev,ch[1].c.o).toLowerCase()+' em 10 minutos');
+  if(S.scenes[0])ex.push(S.scenes[0].name);
+  $('vEx').innerHTML=ex.map(e=>`<span onclick="runVoice(this.textContent)">${esc(e)}</span>`).join('');
+}
+function openVoice(start){
+  $('vSpeak').checked=!!S.voiceSpeak;$('vWake').checked=!!S.wake;
+  $('vRes').textContent='';$('vRes').className='vres';
+  $('vTxt').textContent=SR?'Toque no microfone e fale':'Seu navegador não tem reconhecimento de voz. Use o Chrome ou digite o comando.';
+  voiceExamples();$('ovVoice').classList.add('show');
+  if(start&&SR)startListen();
+}
+function closeVoice(){stopListen();$('ovVoice').classList.remove('show');wakeOpened=false;resumeWake();}
+$('vSpeak').onchange=e=>{S.voiceSpeak=e.target.checked;save();};
+$('vWake').onchange=e=>setWake(e.target.checked);
+$('vIn').addEventListener('keydown',e=>{if(e.key==='Enter')typedCmd();});
+function typedCmd(){const v=$('vIn').value.trim();if(v){$('vIn').value='';runVoice(v);}}
+function toggleListen(){listening?stopListen():startListen();}
+function startListen(){
+  pauseWake();
+  if(!SR){toast('Reconhecimento de voz indisponível neste navegador.',1);return;}
+  try{
+    rec=new SR();rec.lang='pt-BR';rec.interimResults=true;rec.maxAlternatives=1;rec.continuous=false;
+    rec.onstart=()=>{listening=true;$('vMic').classList.add('on');$('vTxt').textContent='Ouvindo…';$('vRes').textContent='';};
+    rec.onresult=e=>{let t='',fin=false;for(const r of e.results){t+=r[0].transcript;if(r.isFinal)fin=true;}
+      $('vTxt').textContent='“'+t+'”';if(fin){stopListen();runVoice(t);}};
+    rec.onerror=e=>{const m={'not-allowed':'Permita o uso do microfone para o app.','no-speech':'Não ouvi nada. Tente de novo.','network':'Sem internet para reconhecer a voz.'}[e.error]||'Não entendi. Tente de novo.';
+      $('vRes').textContent=m;$('vRes').className='vres err';};
+    rec.onend=()=>{listening=false;resumeWake();$('vMic').classList.remove('on');if($('vTxt').textContent==='Ouvindo…')$('vTxt').textContent='Toque no microfone e fale';};
+    rec.start();
+  }catch(e){toast('Não foi possível usar o microfone.',1);}
+}
+function stopListen(){try{rec&&rec.stop();}catch(_){}listening=false;$('vMic').classList.remove('on');}
+
+/* ---- palavra de ativação "OK Casa" ---- */
+const WAKE=/\b(ok|okay|oke|oque|o que|oi|ei|hey|ola)\s*,?\s*casa\b/;
+let wRec=null,wOn=false,wPaused=false,wArmed=0,wakeOpened=false,wFail=0;
+function wakeUI(){
+  const el=$('wk');if(!el)return;
+  if(!SR){el.style.display='none';return;}
+  const on=S.wake&&wOn&&!wPaused;
+  el.className='wk'+(on?' on':'');
+  el.textContent=S.wake?(on?'Ouvindo "OK Casa"':'"OK Casa" pausado'):'🎤 "OK Casa" desligado';
+  const f=$('wkfs');if(f){f.textContent=on?'🎤 Diga "OK Casa"':'';f.style.display=on?'':'none';}
+}
+function setWake(v){S.wake=v;save();if(v){wFail=0;startWake();toast('Diga "OK Casa" e o comando');}else stopWake();wakeUI();}
+function toggleWake(){if(!SR){toast('Use o Chrome para comandos de voz.',1);return;}setWake(!S.wake);}
+function pauseWake(){wPaused=true;try{wRec&&wRec.abort();}catch(_){}wakeUI();}
+function resumeWake(){wPaused=false;if(S.wake&&!listening)setTimeout(startWake,400);wakeUI();}
+function stopWake(){wOn=false;try{wRec&&wRec.abort();}catch(_){}wRec=null;wakeUI();}
+function startWake(){
+  if(!SR||!S.wake||wPaused||listening||document.hidden||wRec)return;
+  try{
+    wRec=new SR();wRec.lang='pt-BR';wRec.continuous=true;wRec.interimResults=true;
+    wRec.onstart=()=>{wOn=true;wakeUI();};
+    wRec.onresult=e=>{
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const r=e.results[i],txt=r[0].transcript,n=norm(txt);
+        const m=n.match(WAKE);
+        if(m&&!wArmed){wArmed=Date.now();wakeShow('Pode falar…');if(navigator.vibrate)navigator.vibrate(40);}
+        if(wArmed&&wakeOpened)$('vTxt').textContent='“'+txt+'”';
+        if(!r.isFinal)continue;
+        if(m){
+          const rest=n.slice(n.indexOf(m[0])+m[0].length).trim();
+          if(rest.length>2){wArmed=0;wakeRun(rest);}
+          else{wArmed=Date.now();wakeShow('Pode falar…');}
+        }else if(wArmed&&Date.now()-wArmed<8000){wArmed=0;wakeRun(n);}
+      }
+      if(wArmed&&Date.now()-wArmed>8000){wArmed=0;if(wakeOpened)closeVoice();}
+    };
+    wRec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){S.wake=false;save();toast('Permita o microfone para usar "OK Casa".',1);} };
+    wRec.onend=()=>{wRec=null;wOn=false;wakeUI();
+      if(S.wake&&!wPaused&&!listening&&!document.hidden){wFail++;setTimeout(()=>{wFail=0;startWake();},wFail>5?3000:250);}};
+    wRec.start();
+  }catch(_){wRec=null;}
+}
+function wakeShow(msg){
+  if(!$('ovVoice').classList.contains('show')){openVoice(false);wakeOpened=true;}
+  $('vMic').classList.add('on');$('vTxt').textContent=msg;$('vRes').textContent='';
+}
+async function wakeRun(cmd){
+  wakeShow('…');await runVoice(cmd);$('vMic').classList.remove('on');
+  if(wakeOpened)setTimeout(()=>{if(wakeOpened&&!wArmed){$('ovVoice').classList.remove('show');wakeOpened=false;}},3500);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopWake();else if(S.wake)startWake();});
+
+// encontra aparelhos/cômodos citados no texto
+function findTargets(seg){
+  const tw=new Set(toks(seg));if(!tw.size)return [];
+  const ch=allCh();const cands=[];
+  ch.forEach(x=>{const t=toks(chName(x.dev,x.c.o));if(t.length)cands.push({items:[x],t});});
+  allRooms().forEach(r=>{const items=ch.filter(x=>x.room===r.id);if(items.length)cands.push({items,t:toks(r.name)});});
+  S.plans.forEach(p=>{const ids=p.rooms.map(r=>r.id);const items=ch.filter(x=>ids.includes(x.room));if(items.length)cands.push({items,t:toks(p.name)});});
+  Object.entries(TYPES).forEach(([k,v])=>{const items=ch.filter(x=>chType(x)===k);if(items.length)cands.push({items,t:toks(v[0]),weak:1});});
+  let best=0,out=[];
+  for(const c of cands){
+    const hit=c.t.filter(w=>tw.has(w)||[...tw].some(x=>x.length>3&&(x.startsWith(w)||w.startsWith(x)))).length;
+    if(!hit)continue;
+    const sc=hit/c.t.length+(hit===c.t.length?.5:0)-(c.weak?.3:0)+hit*.01;
+    if(sc>best+1e-9){best=sc;out=[c];}else if(Math.abs(sc-best)<1e-9)out.push(c);
+  }
+  const m=new Map();out.forEach(c=>c.items.forEach(x=>m.set(x.key,x)));return [...m.values()];
+}
+function parseMinutes(t){
+  const m=t.match(/(?:em|por|daqui a|daqui|apos|depois de)\s+(\d+|[a-z]+)\s*(minuto|minutos|min|hora|horas)/);
+  if(!m)return null;let n=/^\d+$/.test(m[1])?+m[1]:NUMW[m[1]];if(!n)return null;
+  if(m[2].startsWith('hora'))n*=60;return {min:n,mode:/\bpor\b/.test(m[0])?'for':'in'};
+}
+async function runVoice(raw){
+  const t=norm(raw);
+  $('vTxt').textContent='“'+raw+'”';
+  const say=(msg,ok=true)=>{$('vRes').textContent=msg;$('vRes').className='vres '+(ok?'ok':'err');speak(msg);if(!$('ovVoice').classList.contains('show'))toast(msg,!ok);};
+  if(!t)return say('Não entendi.',false);
+  const ch=allCh();
+  if(!ch.length)return say('Nenhum aparelho carregado ainda.',false);
+  // status
+  if(/(o que|quais|tem algo|alguma).*(ligad|aces|abert)|^status|^como esta/.test(t)){
+    const on=ch.filter(x=>x.c.s==='on').map(x=>chName(x.dev,x.c.o));
+    const op=S.ops.filter(o=>opState(o)==='open').map(o=>o.name);
+    let msg=on.length?`Ligado: ${on.join(', ')}.`:'Tudo desligado.';
+    if(op.length)msg+=` Aberto: ${op.join(', ')}.`;
+    return say(msg);
+  }
+  // cenas
+  const scn=S.scenes.find(s=>{const st=toks(s.name);return st.length&&st.every(w=>t.split(' ').includes(w));});
+  if(scn&&!/\b(acend|lig|apag|deslig)/.test(t.replace(norm(scn.name),''))){await runScene(scn.id);return say(`Cena ${scn.name} ativada.`);}
+  // intenção
+  const isOff=/\b(apag|deslig|deslique|apague)/.test(t),isOn=/\b(acend|lig|ligue|acenda)/.test(t)&&!isOff;
+  const isToggle=/\b(inverter|alternar|trocar)/.test(t);
+  if(!isOff&&!isOn&&!isToggle)return say('Diga, por exemplo: "acender a luz da sala".',false);
+  const time=parseMinutes(t);
+  const body=t.replace(/(?:em|por|daqui a|daqui|apos|depois de)\s+(\d+|[a-z]+)\s*(minuto|minutos|min|hora|horas)/,'');
+  let targets;
+  if(/\b(tudo|todas|todos|casa toda|geral)\b/.test(body)&&!/\b(tudo|todas|todos) (da|do|de) /.test(body))targets=ch;
+  else{
+    const segs=body.replace(/\b(acender|acenda|acende|ligar|ligue|liga|apagar|apague|apaga|desligar|desligue|desliga|inverter|alternar)\b/g,' ').split(/\s(?:e|,)\s/);
+    const m=new Map();
+    // tenta o texto inteiro primeiro (ex.: "cozinha e gourmet"), depois partes
+    findTargets(body).forEach(x=>m.set(x.key,x));
+    if(segs.length>1)segs.forEach(s=>findTargets(s).forEach(x=>m.set(x.key,x)));
+    targets=[...m.values()];
+    if(/\b(tudo|todas|todos)\b/.test(body)&&targets.length){/* "tudo da sala": mantém só os encontrados */}
+  }
+  if(!targets.length)return say('Não encontrei esse aparelho ou cômodo.',false);
+  const nm=targets.length>3?targets.length+' aparelhos':targets.map(x=>chName(x.dev,x.c.o)).join(', ');
+  if(time){
+    const at=Date.now()+time.min*60000;
+    if(time.mode==='for'||isOn){await setMany(targets,'on');targets.forEach(x=>S.timers[x.key]={at,to:'off'});save();render();
+      return say(`${nm} ligado, desliga em ${time.min} minutos.`);}
+    targets.forEach(x=>S.timers[x.key]={at,to:'off'});save();render();
+    return say(`${nm} desliga em ${time.min} minutos.`);
+  }
+  if(isToggle){for(const x of targets)await setMany([x],x.c.s==='on'?'off':'on');return say(`Pronto: ${nm}.`);}
+  const st=isOn?'on':'off';
+  await setMany(targets,st);
+  const all=targets.length===ch.length&&targets.length>2;
+  return say(all?(st==='on'?'Tudo ligado.':'Tudo desligado.'):`${st==='on'?'Ligado':'Desligado'}: ${nm}.`);
+}
+
 /* ---------- tela cheia ---------- */
 let wakeLock=null;
 async function toggleFS(){
@@ -963,7 +1167,8 @@ function setupPWA(){
   $('fav').href=i192;$('ati').href=i192;
   const base=location.origin+location.pathname;
   const man={name:'Casa Inteligente',short_name:'Casa',start_url:base,scope:base,display:'standalone',background_color:'#0b1120',theme_color:'#0b1120',
-    icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+    icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png',purpose:'any maskable'}],
+    shortcuts:[{name:'Comando de voz',short_name:'Voz',url:base+'?voz=1',icons:[{src:i192,sizes:'192x192',type:'image/png'}]}]};
   $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
 }
 
@@ -975,6 +1180,10 @@ function setupPWA(){
   render();
   loadDevices();
   startTimer();
+  wakeUI();if(S.wake)startWake();
+  // 1º toque na tela libera o microfone se o navegador exigir
+  document.addEventListener('pointerdown',()=>{if(S.wake&&!wRec&&!listening)startWake();},{once:true});
+  if(new URLSearchParams(location.search).get('voz')){history.replaceState(null,'',location.pathname);setTimeout(()=>openVoice(true),600);}
 })();
 </script>
 </body>
