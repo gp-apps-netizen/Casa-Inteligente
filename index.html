@@ -367,7 +367,7 @@ const DEF_OPS=()=>[
   {id:'jBanho3',name:'Janela banho 03',t:'janela',x1:2.5,y1:103.3,x2:8.5,y2:103.3}
 ];
 if(!Array.isArray(S.ops))S.ops=DEF_OPS();S.opSensor=S.opSensor||{};S.geo=S.geo||null;
-S.types=S.types||{};S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
+S.types=S.types||{};if(S.startFS===undefined)S.startFS=true;S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
 // ---- várias plantas: S.rooms/S.ops apontam para a planta atual ----
 if(!Array.isArray(S.plans)||!S.plans.length)S.plans=[{id:'casa',name:'Casa',ic:'🏠',rooms:S.rooms,ops:S.ops}];
 if(!S.plans.some(p=>p.id===S.curPlan))S.curPlan=S.plans[0].id;
@@ -677,7 +677,7 @@ function renderScenesScreen(){
 async function tapScene(id){const el=document.querySelector(`[data-sc="${id}"]`);if(el)el.classList.add('run');await runScene(id);setTimeout(()=>{if(el)el.classList.remove('run');},700);}
 /* ---------- tela de ajustes ---------- */
 const sw=(id,on,fn)=>`<label class="sw" onclick="event.stopPropagation()"><input type="checkbox" id="${id}" ${on?'checked':''} onchange="${fn}"><i></i></label>`;
-const srow=(ic,t,sub,fn,extra='',cls='')=>`<button class="srow ${cls}" onclick="${fn}"><span class="si">${ic}</span><span class="st2">${t}${sub?`<small>${sub}</small>`:''}</span>${extra||'<span class="ch">›</span>'}</button>`;
+const srow=(ic,t,sub,fn,extra='',cls='')=>`<div class="srow ${cls}" role="button" onclick="${fn||(extra?"this.querySelector('input')&&this.querySelector('input').click()":'')}"><span class="si">${ic}</span><span class="st2">${t}${sub?`<small>${sub}</small>`:''}</span>${extra||'<span class="ch">›</span>'}</div>`;
 function renderSettings(){
   const b=$('setBox');if(!b)return;
   const conn=S.demo?'Modo demonstração':logged()?`Conectado · ${devices.length} interruptor(es)`:'Não conectado';
@@ -696,6 +696,7 @@ function renderSettings(){
   <div class="sgrp">Voz e painel</div><div class="slist">
     ${srow('🎤','Ativar com "OK Casa"','Escuta contínua com o app aberto','',sw('swWake',S.wake,'setWake(this.checked)'))}
     ${srow('🔊','Responder em voz alta','O app fala o resultado do comando','',sw('swSpeak',S.voiceSpeak,'S.voiceSpeak=this.checked;save()'))}
+    ${srow('⛶','Abrir sempre em tela cheia','Ao abrir o app, mostra a planta em tela cheia','',sw('swStartFS',S.startFS,'S.startFS=this.checked;save()'))}
     ${srow('🖥️','Painel de parede','Planta em tela cheia com relógio e clima',"setView('plan');setTimeout(toggleFS,50)")}
     ${srow('🌤️','Clima no painel',S.geo?'Localização salva':'Toque para permitir a localização','askGeo()')}
   </div>
@@ -704,7 +705,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v11</div>`;
+  <div class="ver">Casa Inteligente · v12</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -1291,6 +1292,10 @@ function setupPWA(){
   loadDevices();
   startTimer();
   wakeUI();if(S.wake)startWake();
+  const hasCode=new URLSearchParams(location.search).get('code');
+  if(S.startFS&&(S.demo||logged())&&!hasCode){S.view='plan';editPlan=false;render();await toggleFS();}
+  // o navegador só permite esconder a barra do sistema após um toque
+  document.addEventListener('pointerdown',()=>{if(document.body.classList.contains('fs')&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});},{passive:true});
   // 1º toque na tela libera o microfone se o navegador exigir
   document.addEventListener('pointerdown',()=>{if(S.wake&&!wRec&&!listening)startWake();},{once:true});
   if(new URLSearchParams(location.search).get('voz')){history.replaceState(null,'',location.pathname);setTimeout(()=>openVoice(true),600);}
