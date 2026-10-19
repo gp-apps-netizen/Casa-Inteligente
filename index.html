@@ -117,7 +117,11 @@ body.fs .wsc{padding-left:60px}
 .dv.on .dvb{fill:rgba(251,191,36,.28);stroke:var(--on)}
 .dv.on .dvi{stroke:var(--on)}
 .dv.off-line{opacity:.4}
+.dv.cam .dvb{fill:#10233a;stroke:#38bdf8}.dv.cam .dvi{stroke:#7dd3fc}
 .dvt{font-size:2.2px;fill:var(--on);text-anchor:middle;font-weight:700;pointer-events:none}
+.qrbox{background:#fff;border-radius:16px;padding:14px;margin:12px auto;width:fit-content;max-width:100%}
+.qrbox img,.qrbox svg{display:block;width:min(84vw,340px);height:auto}
+.steps{font-size:13px;color:var(--mut);line-height:1.6;margin:8px 0 0;padding-left:18px}
 .acT{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0 4px}
 .acT button{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:26px;cursor:pointer}
 .acT b{font-size:56px;font-weight:700;min-width:120px;text-align:center;letter-spacing:-2px}
@@ -131,6 +135,7 @@ body.fs .wsc{padding-left:60px}
 .hdl{fill:var(--acc);stroke:#fff;stroke-width:.4}
 .planHint{font-size:12px;color:var(--mut);text-align:center;margin:8px 0 2px}
 .etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.etools:not(.fix) button{flex:1 1 22%;font-size:12px;padding:10px 3px}
 .etools.fix{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;z-index:10;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
 body.editing{padding-bottom:240px}
 body.editing .bnav{display:none}
@@ -264,6 +269,7 @@ body.fs .plans{display:none}
 <!-- Configurações -->
 <div class="ov" id="ovCfg"><div class="sheet">
   <div class="sh"><h3>🔗 Conta eWeLink</h3><button class="x" onclick="closeCfg()">✕</button></div>
+  <div class="hint">Se o segredo do eWeLink estiver guardado na Ponte, só preencha a Ponte e toque em Entrar. App ID e Secret ficam opcionais.</div>
   <label>App ID (eWeLink Developer)</label>
   <input id="cAppId" autocomplete="off" placeholder="Cole o APPID aqui">
   <label>App Secret</label>
@@ -305,6 +311,24 @@ body.fs .plans{display:none}
   <div class="vres" id="lgRes" style="text-align:left"></div>
   <div style="margin-top:14px"><button class="btn" onclick="lgConnect()">Conectar e buscar aparelhos</button>
   <button class="btn dan" id="lgOut" onclick="lgDisconnect()">Desconectar LG</button></div>
+</div></div>
+
+<!-- Convite -->
+<div class="ov" id="ovInv"><div class="sheet">
+  <div class="sh"><h3>👨‍👩‍👧 Convidar pessoa da casa</h3><button class="x" onclick="$('ovInv').classList.remove('show')">✕</button></div>
+  <div id="invBody"></div>
+</div></div>
+<div class="ov" id="ovGotInv"><div class="sheet">
+  <div class="sh"><h3>🏠 Convite recebido</h3><button class="x" onclick="$('ovGotInv').classList.remove('show')">✕</button></div>
+  <div id="gotBody"></div>
+</div></div>
+
+<!-- Câmeras -->
+<div class="ov" id="ovCams"><div class="sheet">
+  <div class="sh"><h3>📹 Câmeras (iSIC Lite)</h3><button class="x" onclick="$('ovCams').classList.remove('show')">✕</button></div>
+  <div class="hint">Cada câmera vira um ícone 📹 no cômodo da planta. Tocar no ícone abre o app <b>iSIC Lite</b> da Intelbras.</div>
+  <div id="camBody"></div>
+  <div style="margin-top:12px"><button class="btn sec" onclick="addCam()">＋ Adicionar câmera</button><button class="btn" onclick="saveCams()">Salvar</button></div>
 </div></div>
 
 <!-- Voz -->
@@ -407,7 +431,7 @@ const DEF_OPS=()=>[
   {id:'jBanho3',name:'Janela banho 03',t:'janela',x1:2.5,y1:103.3,x2:8.5,y2:103.3}
 ];
 if(!Array.isArray(S.ops))S.ops=DEF_OPS();S.opSensor=S.opSensor||{};S.geo=S.geo||null;
-S.types=S.types||{};if(S.startFS===undefined)S.startFS=true;S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
+S.types=S.types||{};if(!Array.isArray(S.cams))S.cams=[];if(S.startFS===undefined)S.startFS=true;S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
 // ---- várias plantas: S.rooms/S.ops apontam para a planta atual ----
 if(!Array.isArray(S.plans)||!S.plans.length)S.plans=[{id:'casa',name:'Casa',ic:'🏠',rooms:S.rooms,ops:S.ops}];
 if(!S.plans.some(p=>p.id===S.curPlan))S.curPlan=S.plans[0].id;
@@ -445,7 +469,13 @@ async function testProxy(){
   const u=$('cProxy').value.trim().replace(/\/+$/,'');
   if(!/^https:\/\//.test(u)){toast('Cole o endereço completo da ponte (começa com https://).',1);return;}
   try{const r=await fetch(u+'/ping');const j=await r.json();
-    if(j&&j.ponte==='ok')toast('Ponte funcionando ✅');else toast('A ponte respondeu, mas não parece ser o código certo.',1);}
+    if(j&&j.ponte==='ok'){
+      S.proxy=u;S.ponteSegredo=!!j.segredo;save();
+      if(j.segredo){
+        toast('Ponte funcionando ✅ O segredo do eWeLink está guardado na ponte: não precisa de App ID/Secret neste celular.');
+        if(S.secret&&confirm('O segredo já está na ponte. Apagar o App Secret deste celular (mais seguro)?')){S.secret='';$('cSecret').value='';save();}
+      }else toast('Ponte funcionando ✅ (sem segredo guardado: use App ID e Secret, ou configure o segredo na ponte)');
+    }else toast('A ponte respondeu, mas não parece ser o código certo.',1);}
   catch(_){toast('Não consegui acessar a ponte. Confira o endereço e se fez o Deploy.',1);}
 }
 const logged=()=>!!(S.at&&S.appId);
@@ -477,7 +507,17 @@ async function call(method,path,body){
     throw e;
   }
 }
+const usePonte=()=>!!(S.proxy&&(S.ponteSegredo||!S.secret));
 async function login(){
+  if(usePonte()){
+    try{
+      const r=await fetch(S.proxy+'/ewe/login-url?redirect='+encodeURIComponent(S.redirect||defRedirect));
+      const j=await r.json();
+      if(!r.ok||!j.url)throw new Error(j.msg||'erro '+r.status);
+      S.appId=j.appId;S.loginPonte=true;save();location.href=j.url;return;
+    }catch(e){if(!S.secret){toast('A ponte não tem o segredo do eWeLink configurado ('+e.message+'). Configure na ponte ou preencha App ID e Secret.',1);return;}}
+  }
+  S.loginPonte=false;save();
   if(!S.appId||!S.secret){toast('Preencha App ID e App Secret.',1);return;}
   if(!S.proxy&&!confirm('A Ponte não está configurada. Sem ela o navegador bloqueia a conexão. Continuar mesmo assim?'))return;
   const seq=String(Date.now());
@@ -492,7 +532,12 @@ async function handleCallback(){
   history.replaceState(null,'',location.pathname);
   S.region=q.get('region')||S.region||'us';
   try{
-    const d=await api('POST','/v2/user/oauth/token',{code,redirectUrl:S.redirect,grantType:'authorization_code'},true);
+    let d;
+    if(S.loginPonte){
+      const r=await fetch(S.proxy+'/ewe/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,region:S.region,redirectUrl:S.redirect||defRedirect})});
+      const j=await r.json();if(j.error!==0)throw new Error(j.msg||('Erro '+j.error));
+      d=j.data;S.appId=j.appId||S.appId;
+    }else d=await api('POST','/v2/user/oauth/token',{code,redirectUrl:S.redirect,grantType:'authorization_code'},true);
     S.at=d.accessToken;S.rt=d.refreshToken;S.atExp=d.atExpiredTime||Date.now()+29*864e5;S.demo=false;save();
     toast('Conectado ao eWeLink! ✅');
   }catch(e){toast('Falha ao entrar: '+e.message,1);}
@@ -584,6 +629,7 @@ async function allOff(){const n=await setMany(allCh(),'off');toast(n?'Tudo apaga
 /* ---------- interface ---------- */
 const BULB='<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
 const IC={
+  camera:'<path d="M3 7.5h11.5v9H3z"/><path d="M14.5 10.5 21 7v10l-6.5-3.5"/><circle cx="6.5" cy="10.5" r="1"/>',
   luz:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
   tomada:'<circle cx="12" cy="12" r="8.5"/><circle cx="9.3" cy="12" r="1.3"/><circle cx="14.7" cy="12" r="1.3"/>',
   ventilador:'<circle cx="12" cy="12" r="1.8"/><path d="M12 10.2C11 6 12.5 3 15 3.5s2.5 4-3 6.7zM13.6 13c3.2 2.8 4.2 6 2 7.2s-4-1.8-2-7.2zM10.4 13c-4 1.3-7.3.6-7.4-1.9s3.4-3.1 7.4 1.9z"/>',
@@ -670,18 +716,24 @@ function renderPlan(){
     const sub=!ls.length&&editPlan?'sem aparelhos':'';
     const rot=r.w<14&&r.h>r.w*1.4;
     // ícones dos aparelhos
-    const n=ls.length;
+    const cams=S.cams.filter(c=>c.room===r.id);
+    const items=ls.map(x=>({x})).concat(cams.map(c=>({cam:c})));
+    const n=items.length;
     let isz=0,icons='',iconBlock=0;
     if(n){
       const gapI=1.2;
       if(rot){isz=Math.min(7,r.w-3,(r.h*.55-gapI*(n-1))/n);iconBlock=n*isz+(n-1)*gapI;}
       else{isz=Math.min(7.5,(r.w-4-gapI*(n-1))/n,r.h*.42);iconBlock=isz;}
       isz=Math.max(isz,3.2);
-      icons=ls.map((x,i)=>{
+      icons=items.map((it,i)=>{
         let ix,iy;
         if(rot){ix=cx;iy=r.y+r.h-2-iconBlock+isz/2+i*(isz+gapI);}
         else{const tot=n*isz+(n-1)*gapI;ix=cx-tot/2+isz/2+i*(isz+gapI);iy=Math.min(r.y+r.h-isz/2-1.5,cy+isz*.15+2.2);}
-        const onx=x.c.s==='on',k=isz*.6/24,t=chType(x);
+        const k=isz*.6/24;
+        if(it.cam)return `<g class="dv cam" data-cam="${esc(it.cam.id)}"><title>${esc(it.cam.name)}</title>
+          <circle class="dvh" cx="${ix}" cy="${iy}" r="${isz/2+1.2}"/><circle class="dvb" cx="${ix}" cy="${iy}" r="${isz/2}"/>
+          <g transform="translate(${(ix-12*k).toFixed(2)} ${(iy-12*k).toFixed(2)}) scale(${k.toFixed(4)})" class="dvi">${IC.camera}</g></g>`;
+        const x=it.x,onx=x.c.s==='on',t=chType(x);
         return `<g class="dv${onx?' on':''}${x.dev.online?'':' off-line'}" data-key="${esc(x.key)}"><title>${esc(chName(x.dev,x.c.o))}</title>
           <circle class="dvh" cx="${ix}" cy="${iy}" r="${isz/2+1.2}"/>
           <circle class="dvb" cx="${ix}" cy="${iy}" r="${isz/2}"/>
@@ -721,7 +773,7 @@ function renderPlan(){
     const d=selRoom?'':'disabled';
     t.innerHTML=modes+`<button onclick="renamePlan()">📝 Planta</button>${S.plans.length>1?'<button class="dan" onclick="delPlan()">🗑 Planta</button>':''}<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
     }
-  }else t.innerHTML=`<button onclick="allOff()">🌙 Apagar tudo</button><button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar</button>`;
+  }else t.innerHTML=`<button onclick="allOff()">🌙 Apagar</button><button onclick="openIsic()">📹 Câmeras</button><button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar</button>`;
   // luzes sem cômodo
   const un=allCh().filter(x=>!x.room);
   $('unassigned').innerHTML=un.length&&!editPlan?`<section class="room"><div class="rh"><h2>Sem cômodo<small>vincule em Editar planta → Luzes</small></h2></div><div class="grid">${un.map(tile).join('')}</div></section>`:'';
@@ -766,6 +818,7 @@ function renderSettings(){
   <div class="sgrp">Casa</div><div class="slist">
     ${srow('🔌','Interruptores e aparelhos',`${ch.length} aparelho(s) · nomes, tipos e cômodos`,'openDevs()')}
     ${srow('🚪','Portas e janelas',`${S.ops.length} item(ns) · sensores de abertura`,'openOps()')}
+    ${srow('📹','Câmeras (iSIC Lite)',S.cams.length?`${S.cams.length} câmera(s) na planta`:'Colocar ícones de câmera na planta','openCams()')}
     ${srow('❄️','LG ThinQ (ar-condicionado)',S.lg&&S.lg.token?`Conectado · ${lgDevs.length} aparelho(s)`:'Conectar a conta LG','openLG()')}
     ${S.plans.map(p=>srow(esc(p.ic||'🏠'),esc(p.name)+(p.id===S.curPlan?' <small style="display:inline;color:var(--acc)">· atual</small>':''),`${p.rooms.length} cômodo(s) · toque para editar`,`editPlanFromSettings('${esc(p.id)}')`)).join('')}
     ${srow('＋','Nova planta','Outro andar, casa de praia, sítio…','newPlan()')}
@@ -781,11 +834,12 @@ function renderSettings(){
     ${matchMedia('(display-mode: standalone)').matches?srow('✅','Instalado como aplicativo','Você está usando o app instalado',''):srow('📲','Instalar aplicativo',installEvt?'Toque para instalar no celular':'Menu ⋮ do Chrome → Instalar app','installApp()')}
   </div>
   <div class="sgrp">Dados</div><div class="slist">
+    ${srow('👨‍👩‍👧','Convidar pessoa da casa','Link ou QR Code com a casa já configurada','openInvite()')}
     ${srow('💾','Exportar backup','Salva plantas, cenas e ajustes em um arquivo','exportBackup()')}
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v16</div>`;
+  <div class="ver">Casa Inteligente · v18</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -828,7 +882,8 @@ function pDown(e){
   const g=e.target.closest('[data-id]');
   if(!editPlan){
     clearTimeout(press&&press.t);press=null;
-    const dvEl=e.target.closest('[data-key]');
+    const dvEl=e.target.closest('[data-key]'),camEl=e.target.closest('[data-cam]');
+    if(camEl){press={id:null,cam:camEl.dataset.cam,done:false,t:null};return;}
     if(g){const id=g.dataset.id,key=dvEl?dvEl.dataset.key:null;press={id,key,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);if(key){const xx=allCh().find(y=>y.key===key);if(xx&&xx.dev.ac)openAC(xx.dev.id);else openTimer(key);}else openRoom(id);}},500)};}
     return;
   }
@@ -891,6 +946,7 @@ function pUp(e){
   if(!press)return;
   clearTimeout(press.t);const pr=press;press=null;
   if(pr.done)return;
+  if(pr.cam){openIsic(pr.cam);return;}
   if(pr.key){const x=allCh().find(y=>y.key===pr.key);if(x){toggle(x.dev.id,x.c.o);toast(chName(x.dev,x.c.o)+': '+stLabel(x).toLowerCase());}return;}
   tapRoom(pr.id);
 }
@@ -1059,6 +1115,116 @@ $('seSave').onclick=()=>{
   save();$('ovScene').classList.remove('show');render();toast('Cena salva ✅');
 };
 $('seDel').onclick=()=>{if(!confirm('Excluir esta cena?'))return;S.scenes=S.scenes.filter(s=>s.id!==seId);save();$('ovScene').classList.remove('show');render();};
+
+/* ---------- convite ---------- */
+const b64u=bytes=>{let s='';bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+const unb64u=str=>{str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';return Uint8Array.from(atob(str),c=>c.charCodeAt(0));};
+async function zip(txt){
+  if(!window.CompressionStream)return 'j'+b64u(new TextEncoder().encode(txt));
+  const cs=new Blob([txt]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return 'z'+b64u(new Uint8Array(await new Response(cs).arrayBuffer()));
+}
+async function unzip(s){
+  const bytes=unb64u(s.slice(1));
+  if(s[0]==='j')return new TextDecoder().decode(bytes);
+  const ds=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return await new Response(ds).text();
+}
+// arredonda as coordenadas para o link ficar menor
+const r1=v=>Math.round(v*10)/10;
+function inviteData(){
+  syncPlan();
+  return {v:1,proxy:S.proxy,ps:!!S.ponteSegredo,redirect:S.redirect||defRedirect,cur:S.curPlan,
+    plans:S.plans.map(p=>({id:p.id,name:p.name,ic:p.ic,rooms:p.rooms.map(r=>({id:r.id,name:r.name,x:r1(r.x),y:r1(r.y),w:r1(r.w),h:r1(r.h),ly:r.ly})),ops:p.ops.map(o=>({id:o.id,name:o.name,t:o.t,x1:r1(o.x1),y1:r1(o.y1),x2:r1(o.x2),y2:r1(o.y2)}))})),
+    scenes:S.scenes,names:S.names,types:S.types,chRoom:S.chRoom,cfg:S.cfg,opSensor:S.opSensor,startFS:S.startFS,cams:S.cams};
+}
+let qrLib=null;
+function loadQR(){
+  if(window.qrcode)return Promise.resolve();
+  if(qrLib)return qrLib;
+  qrLib=new Promise((ok,err)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';s.onload=ok;s.onerror=err;document.head.appendChild(s);});
+  return qrLib;
+}
+let inviteLink='';
+async function openInvite(){
+  const b=$('invBody');
+  b.innerHTML='<div class="empty">Gerando convite…</div>';$('ovInv').classList.add('show');
+  inviteLink=location.origin+location.pathname+'#convite='+await zip(JSON.stringify(inviteData()));
+  const warn=!S.proxy?'<div class="vres err" style="text-align:left">Configure a Ponte antes de convidar.</div>':
+    !S.ponteSegredo?'<div class="vres err" style="text-align:left">⚠️ O segredo do eWeLink ainda não está na ponte: a pessoa vai precisar digitar App ID e Secret. Guarde o segredo na ponte para facilitar (Ajustes → Conta eWeLink → Testar mostra se está ok).</div>':'';
+  b.innerHTML=`${warn}
+    <div class="qrbox" id="qrBox"><div class="empty" style="color:#333">Carregando QR…</div></div>
+    <div class="hint" style="text-align:center;margin-top:0">Se a câmera não ler o QR, envie o link.</div>
+    <button class="btn" onclick="shareInvite()">📤 Enviar link (WhatsApp…)</button>
+    <button class="btn sec" onclick="copyInvite()">📋 Copiar link</button>
+    <ol class="steps">
+      <li>No app <b>eWeLink</b>, compartilhe os interruptores com a conta eWeLink da pessoa (e na LG ThinQ, convide para sua casa).</li>
+      <li>A pessoa abre o link ou escaneia o QR <b>no Chrome</b> e toca em <b>Aplicar</b>.</li>
+      <li>Depois instala (⋮ → Instalar app) e entra com a <b>conta eWeLink dela</b>.</li>
+    </ol>
+    <div class="hint">O convite leva a planta, cômodos, nomes, cenas e a ponte. <b>Não</b> leva senhas, sessões nem tokens.</div>`;
+  try{
+    await loadQR();
+    const q=qrcode(0,'L');q.addData(inviteLink,'Byte');q.make();
+    $('qrBox').innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});
+  }catch(_){
+    $('qrBox').innerHTML='<div class="empty" style="color:#333;padding:10px">QR indisponível (convite grande ou sem internet). Use o botão de enviar link.</div>';
+  }
+}
+async function shareInvite(){
+  const txt='Convite para controlar a casa pelo app Casa Inteligente. Abra no Chrome:';
+  if(navigator.share){try{await navigator.share({title:'Casa Inteligente',text:txt,url:inviteLink});return;}catch(e){if(e.name==='AbortError')return;}}
+  location.href='https://wa.me/?text='+encodeURIComponent(txt+' '+inviteLink);
+}
+async function copyInvite(){try{await navigator.clipboard.writeText(inviteLink);toast('Link copiado ✅');}catch(_){prompt('Copie o link:',inviteLink);}}
+let gotInv=null;
+async function checkInvite(){
+  const m=location.hash.match(/^#convite=(.+)$/);if(!m)return;
+  history.replaceState(null,'',location.pathname+location.search);
+  try{gotInv=JSON.parse(await unzip(m[1]));if(!gotInv||!Array.isArray(gotInv.plans))throw 0;}
+  catch(_){toast('Convite inválido ou incompleto.',1);return;}
+  if(document.body.classList.contains('fs'))toggleFS();
+  const nR=gotInv.plans.reduce((a,p)=>a+p.rooms.length,0);
+  $('gotBody').innerHTML=`<div class="empty">Este convite configura o app com <b>${gotInv.plans.length} planta(s)</b>, <b>${nR} cômodos</b> e <b>${(gotInv.scenes||[]).length} cenas</b>.</div>
+    <div class="hint">${S.at?'Sua conexão atual com o eWeLink será mantida.':'Depois você entra com a <b>sua conta eWeLink</b>.'}</div>
+    <div style="margin-top:14px"><button class="btn" onclick="applyInvite()">✅ Aplicar</button><button class="btn sec" onclick="$('ovGotInv').classList.remove('show')">Cancelar</button></div>`;
+  $('ovGotInv').classList.add('show');
+}
+function applyInvite(){
+  const d=gotInv;if(!d)return;
+  Object.assign(S,{proxy:d.proxy||S.proxy,ponteSegredo:!!d.ps,redirect:location.origin+location.pathname,plans:d.plans,curPlan:d.cur,
+    scenes:d.scenes||S.scenes,names:d.names||{},types:d.types||{},chRoom:d.chRoom||{},cfg:d.cfg||{},opSensor:d.opSensor||{},cams:d.cams||[],startFS:d.startFS!==false,demo:false,planVer:PLAN_VER});
+  if(!S.plans.some(p=>p.id===S.curPlan))S.curPlan=S.plans[0].id;
+  loadPlan();save();$('ovGotInv').classList.remove('show');
+  if(logged()){toast('Casa configurada ✅');S.view='plan';render();loadDevices();return;}
+  S.view='settings';render();
+  $('gotBody').innerHTML=`<div class="empty">✅ Casa configurada! Agora entre com a <b>sua conta eWeLink</b> (a mesma em que os interruptores foram compartilhados com você).</div>
+    <div style="margin-top:14px"><button class="btn" onclick="$('ovGotInv').classList.remove('show');${d.ps?'login()':'openCfg()'}">🔗 Entrar com eWeLink</button></div>`;
+  $('ovGotInv').classList.add('show');
+}
+
+/* ---------- câmeras (atalho para o iSIC Lite) ---------- */
+const ISIC_PKG='com.intelbras.isiclite';
+function openIsic(camId){
+  const c=S.cams.find(x=>x.id===camId);
+  if(c)toast('📹 Abrindo iSIC Lite: '+c.name);
+  const ua=navigator.userAgent;
+  if(/Android/i.test(ua)){
+    const fb=encodeURIComponent('https://play.google.com/store/apps/details?id='+ISIC_PKG);
+    location.href='intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package='+ISIC_PKG+';S.browser_fallback_url='+fb+';end';
+  }else if(/iPhone|iPad/i.test(ua))location.href='https://apps.apple.com/br/app/id1323192678';
+  else toast('Abra o iSIC Lite no celular.');
+}
+let camDraft=[];
+function roomOpts(sel){return S.plans.map(p=>`<optgroup label="${esc(p.name)}">`+p.rooms.map(r=>`<option value="${esc(r.id)}" ${sel===r.id?'selected':''}>${esc(r.name)}</option>`).join('')+`</optgroup>`).join('');}
+function openCams(){syncPlan();camDraft=S.cams.map(c=>({...c}));drawCams();$('ovCams').classList.add('show');}
+function drawCams(){
+  $('camBody').innerHTML=camDraft.length?camDraft.map((c,i)=>`<div class="dev"><div class="row"><input data-cn="${i}" value="${esc(c.name)}" placeholder="Nome (ex.: Câmera da garagem)"><button class="btn dan" style="flex:0 0 48px;padding:0" onclick="camDraft.splice(${i},1);drawCams()">🗑</button></div>
+    <select data-cr="${i}" style="margin-top:8px">${roomOpts(c.room)}</select></div>`).join(''):'<div class="empty">Nenhuma câmera ainda. Toque em "Adicionar câmera".</div>';
+}
+function readCamDraft(){document.querySelectorAll('[data-cn]').forEach(el=>camDraft[+el.dataset.cn].name=el.value.trim()||'Câmera');document.querySelectorAll('[data-cr]').forEach(el=>camDraft[+el.dataset.cr].room=el.value);}
+function addCam(){readCamDraft();camDraft.push({id:'c'+Date.now().toString(36),name:'Câmera '+(camDraft.length+1),room:(S.rooms[0]||{}).id});drawCams();}
+function saveCams(){readCamDraft();S.cams=camDraft;save();$('ovCams').classList.remove('show');render();toast('Câmeras salvas ✅');}
 
 /* ---------- LG ThinQ ---------- */
 const LG_KEY='v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3'; // chave pública do ThinQ Connect
@@ -1295,6 +1461,7 @@ async function runVoice(raw){
   if(!t)return say('Não entendi.',false);
   const ch=allCh();
   if(!ch.length)return say('Nenhum aparelho carregado ainda.',false);
+  if(/\b(camera|cameras|cameras)\b/.test(t)&&/\b(abr|ver|mostr)/.test(t)){say('Abrindo as câmeras.');openIsic();return;}
   // status
   if(/(o que|quais|tem algo|alguma).*(ligad|aces|abert)|^status|^como esta/.test(t)){
     const on=ch.filter(x=>x.c.s==='on').map(x=>chName(x.dev,x.c.o));
@@ -1475,9 +1642,10 @@ async function installApp(){
   render();
   loadDevices();
   startTimer();
+  await checkInvite();
   wakeUI();if(S.wake)startWake();
   const hasCode=new URLSearchParams(location.search).get('code');
-  if(S.startFS&&(S.demo||logged())&&!hasCode){S.view='plan';editPlan=false;render();await toggleFS();}
+  if(S.startFS&&(S.demo||logged())&&!hasCode&&!$('ovGotInv').classList.contains('show')){S.view='plan';editPlan=false;render();await toggleFS();}
   // o navegador só permite esconder a barra do sistema após um toque
   document.addEventListener('pointerdown',()=>{if(document.body.classList.contains('fs')&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});},{passive:true});
   // 1º toque na tela libera o microfone se o navegador exigir
