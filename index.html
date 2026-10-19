@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0b1120">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Casa Inteligente</title>
-<link rel="manifest" id="mf">
-<link rel="icon" id="fav">
-<link rel="apple-touch-icon" id="ati">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 :root{--bg:#0b1120;--card:#141c2f;--card2:#1b2540;--txt:#e8edf7;--mut:#8b97b3;--on:#fbbf24;--onbg:#3a2f12;--ok:#22c55e;--err:#ef4444;--acc:#3b82f6;--line:#26314d}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -110,6 +110,16 @@ body.fs .wsc{padding-left:60px}
 .rm.lit .rs{fill:var(--on)}
 .rm{cursor:pointer}
 .pool{fill:rgba(56,189,248,.18);stroke:rgba(56,189,248,.55);stroke-width:.4;pointer-events:none}
+.dv{cursor:pointer}
+.dv .dvh{fill:transparent}
+.dv .dvb{fill:#0f172a;stroke:#3a4870;stroke-width:.35;transition:fill .25s,stroke .25s}
+.dv .dvi{fill:none;stroke:#8b97b3;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .25s}
+.dv.on .dvb{fill:rgba(251,191,36,.28);stroke:var(--on)}
+.dv.on .dvi{stroke:var(--on)}
+.dv.off-line{opacity:.4}
+.dv.busy .dvb{stroke-dasharray:1 .8}
+.dv:active .dvb{transform-box:fill-box;transform-origin:center;transform:scale(.9)}
+#plan.editing .dv{pointer-events:none;opacity:.6}
 .hdl{fill:var(--acc);stroke:#fff;stroke-width:.4}
 .planHint{font-size:12px;color:var(--mut);text-align:center;margin:8px 0 2px}
 .etools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -623,19 +633,40 @@ function renderPlan(){
     const ls=lightsOf(r.id),on=ls.filter(x=>x.c.s==='on').length;
     const cx=r.x+r.w/2,cy=r.y+r.h*(r.ly||.5);
     const cls='rm'+(on?' lit':'')+(!ls.length?' nolight':'')+(editPlan&&selRoom===r.id?' sel':'');
-    const sub=ls.length?`${ls.every(x=>chType(x)==='luz')?'💡':'⚡'} ${on}/${ls.length}`:(editPlan?'sem aparelhos':'');
+    const sub=!ls.length&&editPlan?'sem aparelhos':'';
     const rot=r.w<14&&r.h>r.w*1.4;
-    const avail=(rot?r.h:r.w)-2;
-    const fs=Math.min(3.6,avail/(r.name.length*.62)),ss=Math.min(2.6,fs*.8);
+    // ícones dos aparelhos
+    const n=ls.length;
+    let isz=0,icons='',iconBlock=0;
+    if(n){
+      const gapI=1.2;
+      if(rot){isz=Math.min(7,r.w-3,(r.h*.55-gapI*(n-1))/n);iconBlock=n*isz+(n-1)*gapI;}
+      else{isz=Math.min(7.5,(r.w-4-gapI*(n-1))/n,r.h*.42);iconBlock=isz;}
+      isz=Math.max(isz,3.2);
+      icons=ls.map((x,i)=>{
+        let ix,iy;
+        if(rot){ix=cx;iy=r.y+r.h-2-iconBlock+isz/2+i*(isz+gapI);}
+        else{const tot=n*isz+(n-1)*gapI;ix=cx-tot/2+isz/2+i*(isz+gapI);iy=Math.min(r.y+r.h-isz/2-1.5,cy+isz*.15+2.2);}
+        const onx=x.c.s==='on',k=isz*.6/24,t=chType(x);
+        return `<g class="dv${onx?' on':''}${x.dev.online?'':' off-line'}" data-key="${esc(x.key)}"><title>${esc(chName(x.dev,x.c.o))}</title>
+          <circle class="dvh" cx="${ix}" cy="${iy}" r="${isz/2+1.2}"/>
+          <circle class="dvb" cx="${ix}" cy="${iy}" r="${isz/2}"/>
+          <g transform="translate(${(ix-12*k).toFixed(2)} ${(iy-12*k).toFixed(2)}) scale(${k.toFixed(4)})" class="dvi">${IC[t]||IC.luz}</g></g>`;
+      }).join('');
+    }
+    const tcy=rot?(n?r.y+(r.h-iconBlock-2)/2:cy):(n?Math.max(r.y+3,cy-isz*.55-1.2):cy);
+    const avail=(rot?(n?r.h-iconBlock-4:r.h):r.w)-2;
+    const fs=Math.max(1.6,Math.min(3.6,avail/(r.name.length*.62))),ss=Math.min(2.6,fs*.8);
     const gap=Math.min(r.h,r.w)<16?fs*.55:fs*.7;
-    const tr=rot?` transform="rotate(-90 ${cx} ${cy})"`:'';
+    const tr=rot?` transform="rotate(-90 ${cx} ${tcy})"`:'';
     const deco=DECO.filter(d=>d.room===r.id&&d.x+d.w<=r.w&&d.y+d.h<=r.h).map(d=>`<rect class="pool" x="${r.x+d.x}" y="${r.y+d.y}" width="${d.w}" height="${d.h}" rx=".8"/>`).join('');
     return `<g class="${cls}" data-id="${esc(r.id)}">
       <rect class="b" x="${r.x+.4}" y="${r.y+.4}" width="${r.w-.8}" height="${r.h-.8}" rx="1.5"/>
       ${deco}
       ${on?`<ellipse cx="${r.x+r.w/2}" cy="${r.y+r.h/2}" rx="${r.w/2.2}" ry="${r.h/2.2}" fill="url(#glow)" pointer-events="none"/>`:''}
-      <g${tr}><text class="rn" style="font-size:${fs.toFixed(2)}px" x="${cx}" y="${cy-(sub?gap:0)}">${esc(r.name)}</text>
-      ${sub?`<text class="rs" style="font-size:${ss.toFixed(2)}px" x="${cx}" y="${cy+gap+.4}">${sub}</text>`:''}</g>
+      <g${tr}><text class="rn" style="font-size:${fs.toFixed(2)}px" x="${cx}" y="${tcy-(sub?gap:0)}">${esc(r.name)}</text>
+      ${sub?`<text class="rs" style="font-size:${ss.toFixed(2)}px" x="${cx}" y="${tcy+gap+.4}">${sub}</text>`:''}</g>
+      ${icons}
       ${editPlan&&selRoom===r.id?`<circle class="hdl" data-h="1" cx="${r.x+r.w-.8}" cy="${r.y+r.h-.8}" r="2.4"/>`:''}
     </g>`;
   }).join('')+S.ops.map(o=>{const st=opState(o);
@@ -645,7 +676,7 @@ function renderPlan(){
       (sel?`<circle class="oh" data-oh="1" data-op="${esc(o.id)}" cx="${o.x1}" cy="${o.y1}" r="2"/><circle class="oh" data-oh="2" data-op="${esc(o.id)}" cx="${o.x2}" cy="${o.y2}" r="2"/>`:'');}).join('');
   renderSummary();renderWall();
   const so=S.ops.find(o=>o.id===selOp);
-  $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no cômodo para acender/apagar · segure para ver detalhes';
+  $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no ícone para ligar/desligar · segure o ícone para timer · segure o cômodo para detalhes';
   const t=$('eTools');
   t.classList.toggle('fix',editPlan);document.body.classList.toggle('editing',editPlan);
   if(editPlan){
@@ -711,12 +742,15 @@ function renderSettings(){
     ${srow('🖥️','Painel de parede','Planta em tela cheia com relógio e clima',"setView('plan');setTimeout(toggleFS,50)")}
     ${srow('🌤️','Clima no painel',S.geo?'Localização salva':'Toque para permitir a localização','askGeo()')}
   </div>
+  <div class="sgrp">Aplicativo</div><div class="slist">
+    ${matchMedia('(display-mode: standalone)').matches?srow('✅','Instalado como aplicativo','Você está usando o app instalado',''):srow('📲','Instalar aplicativo',installEvt?'Toque para instalar no celular':'Menu ⋮ do Chrome → Instalar app','installApp()')}
+  </div>
   <div class="sgrp">Dados</div><div class="slist">
     ${srow('💾','Exportar backup','Salva plantas, cenas e ajustes em um arquivo','exportBackup()')}
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v13</div>`;
+  <div class="ver">Casa Inteligente · v15</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -759,7 +793,8 @@ function pDown(e){
   const g=e.target.closest('[data-id]');
   if(!editPlan){
     clearTimeout(press&&press.t);press=null;
-    if(g){const id=g.dataset.id;press={id,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);openRoom(id);}},500)};}
+    const dvEl=e.target.closest('[data-key]');
+    if(g){const id=g.dataset.id,key=dvEl?dvEl.dataset.key:null;press={id,key,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);if(key)openTimer(key);else openRoom(id);}},500)};}
     return;
   }
   if(editMode==='ops'){
@@ -820,7 +855,9 @@ function pUp(e){
   }
   if(!press)return;
   clearTimeout(press.t);const pr=press;press=null;
-  if(!pr.done)tapRoom(pr.id);
+  if(pr.done)return;
+  if(pr.key){const x=allCh().find(y=>y.key===pr.key);if(x){toggle(x.dev.id,x.c.o);toast(chName(x.dev,x.c.o)+': '+stLabel(x).toLowerCase());}return;}
+  tapRoom(pr.id);
 }
 function cancelPress(){if(press){clearTimeout(press.t);press=null;}}
 // toque: 1 luz liga/desliga direto; várias luzes abre o painel
@@ -1273,25 +1310,15 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&
 
 /* ---------- PWA (ícone e manifest embutidos) ---------- */
 function setupPWA(){
-  const mk=s=>{
-    const c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
-    const g=x.createLinearGradient(0,0,s,s);g.addColorStop(0,'#1e3a8a');g.addColorStop(1,'#0b1120');
-    x.fillStyle=g;x.fillRect(0,0,s,s);
-    const u=s/100;
-    x.strokeStyle='#e8edf7';x.lineWidth=6*u;x.lineJoin='round';x.lineCap='round';
-    x.beginPath();x.moveTo(22*u,48*u);x.lineTo(50*u,24*u);x.lineTo(78*u,48*u);x.stroke();
-    x.beginPath();x.moveTo(30*u,44*u);x.lineTo(30*u,76*u);x.lineTo(70*u,76*u);x.lineTo(70*u,44*u);x.stroke();
-    x.fillStyle='#fbbf24';x.shadowColor='#fbbf24';x.shadowBlur=12*u;
-    x.beginPath();x.arc(50*u,56*u,9*u,0,Math.PI*2);x.fill();
-    return c.toDataURL('image/png');
-  };
-  const i192=mk(192),i512=mk(512);
-  $('fav').href=i192;$('ati').href=i192;
-  const base=location.origin+location.pathname;
-  const man={name:'Casa Inteligente',short_name:'Casa',start_url:base,scope:base,display:'standalone',background_color:'#0b1120',theme_color:'#0b1120',
-    icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png',purpose:'any maskable'}],
-    shortcuts:[{name:'Comando de voz',short_name:'Voz',url:base+'?voz=1',icons:[{src:i192,sizes:'192x192',type:'image/png'}]}]};
-  $('mf').href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
+  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+// botão "Instalar app" quando o Chrome permitir
+let installEvt=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(S.view==='settings')render();});
+addEventListener('appinstalled',()=>{installEvt=null;toast('App instalado ✅');});
+async function installApp(){
+  if(installEvt){installEvt.prompt();await installEvt.userChoice;installEvt=null;render();}
+  else toast('No Chrome: menu ⋮ → "Instalar app". Se já estiver instalado, abra pelo ícone da tela inicial.');
 }
 
 /* ---------- início ---------- */
