@@ -839,7 +839,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v18</div>`;
+  <div class="ver">Casa Inteligente · v19</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -1211,7 +1211,8 @@ function openIsic(camId){
   const ua=navigator.userAgent;
   if(/Android/i.test(ua)){
     const fb=encodeURIComponent('https://play.google.com/store/apps/details?id='+ISIC_PKG);
-    location.href='intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package='+ISIC_PKG+';S.browser_fallback_url='+fb+';end';
+    // o Chrome só abre apps que aceitam link; a Play Store aceita e, com "launch", abre o app instalado
+    location.href='intent://launch?id='+ISIC_PKG+'#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url='+fb+';end';
   }else if(/iPhone|iPad/i.test(ua))location.href='https://apps.apple.com/br/app/id1323192678';
   else toast('Abra o iSIC Lite no celular.');
 }
