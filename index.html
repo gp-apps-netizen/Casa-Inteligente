@@ -117,6 +117,14 @@ body.fs .wsc{padding-left:60px}
 .dv.on .dvb{fill:rgba(251,191,36,.28);stroke:var(--on)}
 .dv.on .dvi{stroke:var(--on)}
 .dv.off-line{opacity:.4}
+.dvt{font-size:2.2px;fill:var(--on);text-anchor:middle;font-weight:700;pointer-events:none}
+.acT{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0 4px}
+.acT button{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:26px;cursor:pointer}
+.acT b{font-size:56px;font-weight:700;min-width:120px;text-align:center;letter-spacing:-2px}
+.acT b small{font-size:22px;color:var(--mut);font-weight:600}
+.acCur{text-align:center;color:var(--mut);font-size:13px;margin-bottom:6px}
+.acPw{width:100%;padding:14px;border-radius:14px;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
+.acPw.on{background:var(--acc);color:#fff}.acPw.off{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
 .dv.busy .dvb{stroke-dasharray:1 .8}
 .dv:active .dvb{transform-box:fill-box;transform-origin:center;transform:scale(.9)}
 #plan.editing .dv{pointer-events:none;opacity:.6}
@@ -278,6 +286,25 @@ body.fs .plans{display:none}
   <div class="sh"><h3>🔌 Interruptores e luzes</h3><button class="x" onclick="$('ovDevs').classList.remove('show')">✕</button></div>
   <div id="dBody"></div>
   <div style="margin-top:16px"><button class="btn" id="bDevsSave">Salvar</button></div>
+</div></div>
+
+<!-- Ar-condicionado -->
+<div class="ov" id="ovAC"><div class="sheet">
+  <div class="sh"><h3 id="acTitle">❄️ Ar-condicionado</h3><button class="x" onclick="closeAC()">✕</button></div>
+  <div id="acBody" style="margin-top:8px"></div>
+</div></div>
+
+<!-- LG ThinQ -->
+<div class="ov" id="ovLG"><div class="sheet">
+  <div class="sh"><h3>❄️ LG ThinQ</h3><button class="x" onclick="$('ovLG').classList.remove('show')">✕</button></div>
+  <div class="hint">Gere um <b>token pessoal</b> em <b>connect-pat.lgthinq.com</b> (entre com a conta do app LG ThinQ → ADD NEW TOKEN → marque todas as permissões → CREATE TOKEN) e cole aqui. Usa a mesma Ponte do eWeLink.</div>
+  <label>Token pessoal (PAT)</label>
+  <input id="lgTok" type="password" autocomplete="new-password" placeholder="Cole o token da LG">
+  <label>País da conta LG</label>
+  <select id="lgCountry"><option value="BR">Brasil</option><option value="US">Estados Unidos</option><option value="PT">Portugal</option><option value="AR">Argentina</option></select>
+  <div class="vres" id="lgRes" style="text-align:left"></div>
+  <div style="margin-top:14px"><button class="btn" onclick="lgConnect()">Conectar e buscar aparelhos</button>
+  <button class="btn dan" id="lgOut" onclick="lgDisconnect()">Desconectar LG</button></div>
 </div></div>
 
 <!-- Voz -->
@@ -473,7 +500,9 @@ async function handleCallback(){
 
 /* ---------- dispositivos e luzes ---------- */
 async function loadDevices(silent){
-  if(S.demo||!logged()){render();return;}
+  if(S.demo){render();return;}
+  if(S.lg&&S.lg.token)loadLG(silent);
+  if(!logged()){render();return;}
   if(loading||drag)return;loading=true;$('bRef').classList.add('spin');
   try{
     const d=await call('GET','/v2/device/thing?num=0');
@@ -491,7 +520,9 @@ async function loadDevices(silent){
   }catch(e){setStatus('err','Erro de conexão');if(!silent)toast(e.message,1);}
   loading=false;$('bRef').classList.remove('spin');render();
 }
-const list=()=>S.demo?demoDevs:devices;
+let lgDevs=[];
+const demoAC=[{id:'lg:demo-ac',lgId:'demo-ac',kind:'lg',name:'Ar da Suíte',online:true,multi:false,ch:[{o:0,s:'off'}],ac:{mode:'COOL',target:22,current:27,fan:'MID'}}];
+const list=()=>S.demo?demoDevs.concat(demoAC):devices.concat(lgDevs);
 let demoSensors=[{id:'demo-dw-porta',name:'Sensor porta principal (demo)',online:true,open:false},{id:'demo-dw-portao',name:'Sensor portão (demo)',online:true,open:true}];
 const sensorList=()=>S.demo?demoSensors:sensors;
 const DEMO_LINK={pPrincipal:'demo-dw-porta',gGaragem:'demo-dw-portao'};
@@ -506,12 +537,14 @@ function chCount(dev){
 }
 function chName(dev,o){
   const k=dev.id+':'+o;if(S.names[k])return S.names[k];
+  if(dev.kind==='lg')return dev.name;
   const dk=devKey(dev.name);
   if(dk&&DEF_NAMES[dk][o])return DEF_NAMES[dk][o];
   return dev.name+' · Luz '+(o+1);
 }
 function chRoom(dev,o){
   const k=dev.id+':'+o;
+  if(S.demo&&k==='lg:demo-ac:0'&&!(k in S.chRoom))return roomById('suite')?'suite':null;
   if(k in S.chRoom)return roomById(S.chRoom[k])?S.chRoom[k]:null;
   const dk=devKey(dev.name);const r=dk&&DEF_CHROOM[dk][o];
   return r&&roomById(r)?r:null;
@@ -527,7 +560,8 @@ async function toggle(id,o){
   if(navigator.vibrate)navigator.vibrate(15);
   if(S.demo){c.busy=false;render();return;}
   try{
-    await call('POST','/v2/device/thing/status',{type:1,id:dev.id,params:dev.multi?{switches:[{switch:nv,outlet:o}]}:{switch:nv}});
+    if(dev.kind==='lg')await lgPower(dev,nv);
+    else await call('POST','/v2/device/thing/status',{type:1,id:dev.id,params:dev.multi?{switches:[{switch:nv,outlet:o}]}:{switch:nv}});
   }catch(e){c.s=nv==='on'?'off':'on';toast('Não foi possível: '+e.message,1);}
   c.busy=false;render();
 }
@@ -539,7 +573,7 @@ async function setMany(items,state){
   for(const g of groups){
     g.cs.forEach(c=>c.s=state);n+=g.cs.length;
     if(!S.demo){
-      try{await call('POST','/v2/device/thing/status',{type:1,id:g.dev.id,params:g.dev.multi?{switches:g.cs.map(c=>({switch:state,outlet:c.o}))}:{switch:state}});}
+      try{if(g.dev.kind==='lg')await lgPower(g.dev,state);else await call('POST','/v2/device/thing/status',{type:1,id:g.dev.id,params:g.dev.multi?{switches:g.cs.map(c=>({switch:state,outlet:c.o}))}:{switch:state}});}
       catch(e){g.cs.forEach(c=>c.s=state==='on'?'off':'on');toast(e.message,1);}
     }
   }
@@ -559,15 +593,15 @@ const IC={
   outro:'<path d="M12 3v8M7 6.3a7 7 0 1 0 10 0"/>'
 };
 const TYPES={luz:['Luz','Acesa','Apagada'],tomada:['Tomada','Ligada','Desligada'],ventilador:['Ventilador','Ligado','Desligado'],bomba:['Bomba / Motor','Ligada','Desligada'],ar:['Ar-condicionado','Ligado','Desligado'],portao:['Portão','Acionado','Parado'],outro:['Outro','Ligado','Desligado']};
-const chType=x=>TYPES[S.types[x.key]]?S.types[x.key]:'luz';
-const stLabel=x=>TYPES[chType(x)][x.c.s==='on'?1:2];
+const chType=x=>TYPES[S.types[x.key]]?S.types[x.key]:(x.dev.kind==='lg'?'ar':'luz');
+const stLabel=x=>TYPES[chType(x)][x.c.s==='on'?1:2]+(x.dev.ac&&x.c.s==='on'&&x.dev.ac.target!=null?` · ${x.dev.ac.target}°`:'')+(x.dev.ac&&x.dev.ac.current!=null?` (${x.dev.ac.current}° agora)`:'');
 const icon=t=>`<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${IC[t]||IC.luz}</svg>`;
 function setStatus(cls,txt){$('dot').className='dot '+cls;$('stTxt').textContent=txt;}
 function tile(x){
   const on=x.c.s==='on';
   const cls='tile'+(on?' on':'')+(!x.dev.online?' off-line':'')+(x.c.busy?' busy':'');
   const t=S.timers[x.key];
-  return `<div class="${cls}" role="button" onclick="toggle('${esc(x.dev.id)}',${x.c.o})"><div class="tt">${icon(chType(x))}<span class="tm${t?' act':''}" onclick="event.stopPropagation();openTimer('${esc(x.key)}')">⏱</span></div><div><div class="n">${esc(chName(x.dev,x.c.o))}</div><div class="s">${!x.dev.online?'Offline':stLabel(x)}${t?` · ${t.to==='off'?'desliga':'liga'} em <span data-tk="${esc(x.key)}">${fmtLeft(t.at)}</span>`:''}</div></div></div>`;
+  return `<div class="${cls}" role="button" onclick="toggle('${esc(x.dev.id)}',${x.c.o})"><div class="tt">${icon(chType(x))}<span class="tm${t?' act':''}" onclick="event.stopPropagation();${x.dev.ac?`openAC('${esc(x.dev.id)}')`:`openTimer('${esc(x.key)}')`}">${x.dev.ac?'🌡':'⏱'}</span></div><div><div class="n">${esc(chName(x.dev,x.c.o))}</div><div class="s">${!x.dev.online?'Offline':stLabel(x)}${t?` · ${t.to==='off'?'desliga':'liga'} em <span data-tk="${esc(x.key)}">${fmtLeft(t.at)}</span>`:''}</div></div></div>`;
 }
 
 const VIEWS={plan:'🏠 '+'Casa Inteligente',scenes:'🎬 Cenas',list:'💡 Aparelhos',settings:'⚙️ Ajustes'};
@@ -651,7 +685,7 @@ function renderPlan(){
         return `<g class="dv${onx?' on':''}${x.dev.online?'':' off-line'}" data-key="${esc(x.key)}"><title>${esc(chName(x.dev,x.c.o))}</title>
           <circle class="dvh" cx="${ix}" cy="${iy}" r="${isz/2+1.2}"/>
           <circle class="dvb" cx="${ix}" cy="${iy}" r="${isz/2}"/>
-          <g transform="translate(${(ix-12*k).toFixed(2)} ${(iy-12*k).toFixed(2)}) scale(${k.toFixed(4)})" class="dvi">${IC[t]||IC.luz}</g></g>`;
+          <g transform="translate(${(ix-12*k).toFixed(2)} ${(iy-12*k).toFixed(2)}) scale(${k.toFixed(4)})" class="dvi">${IC[t]||IC.luz}</g>${x.dev.ac&&onx&&x.dev.ac.target!=null?`<text class="dvt" x="${ix}" y="${iy+isz/2+1.9}">${x.dev.ac.target}°</text>`:''}</g>`;
       }).join('');
     }
     const tcy=rot?(n?r.y+(r.h-iconBlock-2)/2:cy):(n?Math.max(r.y+3,cy-isz*.55-1.2):cy);
@@ -732,6 +766,7 @@ function renderSettings(){
   <div class="sgrp">Casa</div><div class="slist">
     ${srow('🔌','Interruptores e aparelhos',`${ch.length} aparelho(s) · nomes, tipos e cômodos`,'openDevs()')}
     ${srow('🚪','Portas e janelas',`${S.ops.length} item(ns) · sensores de abertura`,'openOps()')}
+    ${srow('❄️','LG ThinQ (ar-condicionado)',S.lg&&S.lg.token?`Conectado · ${lgDevs.length} aparelho(s)`:'Conectar a conta LG','openLG()')}
     ${S.plans.map(p=>srow(esc(p.ic||'🏠'),esc(p.name)+(p.id===S.curPlan?' <small style="display:inline;color:var(--acc)">· atual</small>':''),`${p.rooms.length} cômodo(s) · toque para editar`,`editPlanFromSettings('${esc(p.id)}')`)).join('')}
     ${srow('＋','Nova planta','Outro andar, casa de praia, sítio…','newPlan()')}
   </div>
@@ -750,12 +785,12 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v15</div>`;
+  <div class="ver">Casa Inteligente · v16</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
 function exportBackup(){
-  syncPlan();const o={...S};['rooms','ops','at','rt','atExp','secret'].forEach(k=>delete o[k]);
+  syncPlan();const o={...S};['rooms','ops','at','rt','atExp','secret','lg'].forEach(k=>delete o[k]);
   const blob=new Blob([JSON.stringify({app:'casa-inteligente',v:11,data:o},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='casa-inteligente-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
   toast('Backup exportado (sem senhas/tokens)');
@@ -764,7 +799,7 @@ $('fImport').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   try{const j=JSON.parse(await f.text());const d=j.data||j;if(!Array.isArray(d.plans))throw 0;
     if(!confirm('Substituir plantas, cenas e ajustes por este backup?'))return;
-    const keep={appId:S.appId,secret:S.secret,at:S.at,rt:S.rt,atExp:S.atExp,region:S.region};
+    const keep={appId:S.appId,secret:S.secret,at:S.at,rt:S.rt,atExp:S.atExp,region:S.region,lg:S.lg};
     S=Object.assign({},S,d,keep);loadPlan();save();render();toast('Backup restaurado ✅');
   }catch(_){toast('Arquivo de backup inválido.',1);}
 };
@@ -794,7 +829,7 @@ function pDown(e){
   if(!editPlan){
     clearTimeout(press&&press.t);press=null;
     const dvEl=e.target.closest('[data-key]');
-    if(g){const id=g.dataset.id,key=dvEl?dvEl.dataset.key:null;press={id,key,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);if(key)openTimer(key);else openRoom(id);}},500)};}
+    if(g){const id=g.dataset.id,key=dvEl?dvEl.dataset.key:null;press={id,key,done:false,t:setTimeout(()=>{if(press&&press.id===id){press.done=true;if(navigator.vibrate)navigator.vibrate(30);if(key){const xx=allCh().find(y=>y.key===key);if(xx&&xx.dev.ac)openAC(xx.dev.id);else openTimer(key);}else openRoom(id);}},500)};}
     return;
   }
   if(editMode==='ops'){
@@ -1025,6 +1060,112 @@ $('seSave').onclick=()=>{
 };
 $('seDel').onclick=()=>{if(!confirm('Excluir esta cena?'))return;S.scenes=S.scenes.filter(s=>s.id!==seId);save();$('ovScene').classList.remove('show');render();};
 
+/* ---------- LG ThinQ ---------- */
+const LG_KEY='v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3'; // chave pública do ThinQ Connect
+const LG_EU=['PT','ES','FR','DE','IT','GB','NL','BE','PL','SE','NO','DK','FI','IE','AT','CH','GR','CZ','HU','RO'];
+const lgRegion=c=>LG_EU.includes(c)?'eic':(['US','CA','MX','BR','AR','CL','CO','PE','UY','PY','EC','BO','VE','PA','CR','GT','DO','PR'].includes(c)?'aic':'kic');
+let lgLast=0,lgBusy=false;
+function lgMsgId(){const b=crypto.getRandomValues(new Uint8Array(16));return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+async function lgApi(method,path,body){
+  if(!S.proxy)throw new Error('Configure a Ponte em Ajustes → Conta eWeLink.');
+  const lg=S.lg;if(!lg.cid){lg.cid='casa-'+crypto.getRandomValues(new Uint32Array(2)).join('');save();}
+  const h={'Authorization':'Bearer '+lg.token,'x-country':lg.country||'BR','x-message-id':lgMsgId(),'x-client-id':lg.cid,'x-api-key':LG_KEY,'x-service-phase':'OP','Content-Type':'application/json'};
+  let r;
+  try{r=await fetch(S.proxy+'/lg/'+lgRegion(lg.country||'BR')+path,{method,headers:h,body:body?JSON.stringify(body):undefined});}
+  catch(_){throw new Error('Não consegui falar com a LG pela ponte. Atualize o código da ponte no Cloudflare.');}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){const m=(j.error&&(j.error.message||j.error.code))||('Erro '+r.status);const e=new Error(r.status===401?'Token da LG inválido ou expirado.':m);e.status=r.status;throw e;}
+  return j.response!==undefined?j.response:j;
+}
+function lgParse(st){
+  const o={};
+  o.power=st.operation&&st.operation.airConOperationMode==='POWER_ON';
+  o.mode=st.airConJobMode&&st.airConJobMode.currentJobMode;
+  let t=st.temperature;if(Array.isArray(t))t=t.find(x=>x.unit==='C')||t[0];
+  if(!t&&st.temperatureInUnits){const u=st.temperatureInUnits;t=Array.isArray(u)?(u.find(x=>x.unit==='C')||u[0]):u;}
+  if(t){o.target=t.targetTemperature??t.coolTargetTemperature??t.targetTemperatureC;o.current=t.currentTemperature??t.currentTemperatureC;}
+  o.fan=st.airFlow&&st.airFlow.windStrength;
+  return o;
+}
+async function loadLG(silent,force){
+  if(!S.lg||!S.lg.token||lgBusy)return;
+  if(!force&&Date.now()-lgLast<60000)return; // a LG limita o número de consultas
+  lgBusy=true;lgLast=Date.now();
+  try{
+    const list=await lgApi('GET','/devices');
+    const acs=(Array.isArray(list)?list:[]).filter(d=>/AIR_CONDITIONER/.test((d.deviceInfo||{}).deviceType||''));
+    const out=[];
+    for(const d of acs){
+      const id=d.deviceId,old=lgDevs.find(x=>x.lgId===id);
+      let ac=old?old.ac:{},online=true;
+      try{const p=lgParse(await lgApi('GET','/devices/'+id+'/state'));ac=p;}catch(e){online=!!old;}
+      out.push({id:'lg:'+id,lgId:id,kind:'lg',name:(d.deviceInfo||{}).alias||'Ar-condicionado',online,multi:false,ch:[{o:0,s:ac.power?'on':'off'}],ac});
+    }
+    lgDevs=out;
+  }catch(e){if(!silent)toast('LG: '+e.message,1);}
+  lgBusy=false;render();
+}
+async function lgControl(dev,body){
+  if(S.demo)return;
+  await lgApi('POST','/devices/'+dev.lgId+'/control',body);
+  setTimeout(()=>loadLG(true,true),2500);
+}
+async function lgPower(dev,state){
+  await lgControl(dev,{operation:{airConOperationMode:state==='on'?'POWER_ON':'POWER_OFF'}});
+  if(dev.ac)dev.ac.power=state==='on';
+}
+async function lgSetTemp(dev,t){
+  t=Math.max(16,Math.min(30,Math.round(t)));
+  const old=dev.ac.target;dev.ac.target=t;renderACBody();render();
+  if(S.demo)return;
+  try{await lgControl(dev,{temperature:{targetTemperature:t,unit:'C'}});}
+  catch(e){try{await lgControl(dev,{temperature:{coolTargetTemperature:t,unit:'C'}});}catch(e2){dev.ac.target=old;renderACBody();render();toast('LG: '+e.message,1);}}
+}
+async function lgSet(dev,field,val){
+  const old=dev.ac[field];dev.ac[field]=val;renderACBody();render();
+  if(S.demo)return;
+  const body=field==='mode'?{airConJobMode:{currentJobMode:val}}:{airFlow:{windStrength:val}};
+  try{await lgControl(dev,body);}catch(e){dev.ac[field]=old;renderACBody();render();toast('LG: '+e.message,1);}
+}
+let acId=null,acTempTimer=null;
+function openAC(id){acId=id;renderACBody();$('ovAC').classList.add('show');}
+function closeAC(){acId=null;$('ovAC').classList.remove('show');}
+function renderACBody(){
+  const dev=list().find(d=>d.id===acId);if(!dev||!dev.ac)return;
+  const x=allCh().find(y=>y.dev.id===dev.id);const on=dev.ch[0].s==='on',a=dev.ac;
+  $('acTitle').textContent='❄️ '+chName(dev,0);
+  const MODES=[['COOL','❄️ Frio'],['AIR_DRY','💧 Seco'],['FAN','🌀 Ventilar'],['AUTO','🅰️ Auto'],['HEAT','🔥 Quente']];
+  const FANS=[['LOW','Baixa'],['MID','Média'],['HIGH','Alta'],['AUTO','Auto']];
+  $('acBody').innerHTML=`
+    <div class="acT"><button onclick="acStep(-1)">−</button><b>${a.target??'--'}<small>°C</small></b><button onclick="acStep(1)">＋</button></div>
+    <div class="acCur">${a.current!=null?`Temperatura do ambiente: ${a.current}°C`:''}</div>
+    <button class="acPw ${on?'on':'off'}" onclick="toggle('${esc(dev.id)}',0)">${on?'⏻ Ligado: toque para desligar':'⏻ Desligado: toque para ligar'}</button>
+    <label>Modo</label><div class="chips" style="flex-wrap:wrap">${MODES.map(([k,v])=>`<button class="${a.mode===k?'act':''}" onclick="acSet('mode','${k}')">${v}</button>`).join('')}</div>
+    <label>Ventilação</label><div class="chips" style="flex-wrap:wrap">${FANS.map(([k,v])=>`<button class="${a.fan===k?'act':''}" onclick="acSet('fan','${k}')">${v}</button>`).join('')}</div>
+    <button class="btn sec" style="margin-top:14px" onclick="closeAC();openTimer('${esc(x?x.key:dev.id+':0')}')">⏱ Timer (desligar depois de…)</button>`;
+}
+function acStep(d){
+  const dev=list().find(x=>x.id===acId);if(!dev)return;
+  dev.ac.target=Math.max(16,Math.min(30,(dev.ac.target??22)+d));renderACBody();
+  clearTimeout(acTempTimer);acTempTimer=setTimeout(()=>lgSetTemp(dev,dev.ac.target),900); // espera parar de tocar
+}
+function acSet(f,v){const dev=list().find(x=>x.id===acId);if(dev)lgSet(dev,f,v);}
+function openLG(){
+  const lg=S.lg||{};$('lgTok').value=lg.token||'';$('lgCountry').value=lg.country||'BR';
+  $('lgRes').textContent=lg.token?`Conectado · ${lgDevs.length} ar-condicionado(s)`:'';$('lgRes').className='vres';
+  $('lgOut').style.display=lg.token?'block':'none';$('ovLG').classList.add('show');
+}
+async function lgConnect(){
+  const tok=$('lgTok').value.trim();if(!tok){toast('Cole o token da LG.',1);return;}
+  S.lg=Object.assign(S.lg||{},{token:tok,country:$('lgCountry').value});save();
+  $('lgRes').textContent='Conectando…';$('lgRes').className='vres';
+  try{await lgApi('GET','/devices');await loadLG(true,true);
+    $('lgRes').textContent=lgDevs.length?`✅ ${lgDevs.length} ar-condicionado(s) encontrado(s): ${lgDevs.map(d=>d.name).join(', ')}. Escolha o cômodo em Interruptores e aparelhos.`:'Conectado, mas nenhum ar-condicionado encontrado nessa conta.';
+    $('lgRes').className='vres ok';$('lgOut').style.display='block';
+  }catch(e){$('lgRes').textContent='❌ '+e.message;$('lgRes').className='vres err';}
+}
+function lgDisconnect(){if(!confirm('Desconectar a conta LG deste aparelho?'))return;S.lg={};lgDevs=[];save();$('ovLG').classList.remove('show');render();}
+
 /* ---------- comando de voz ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null,listening=false;
@@ -1165,6 +1306,11 @@ async function runVoice(raw){
   // cenas
   const scn=S.scenes.find(s=>{const st=toks(s.name);return st.length&&st.every(w=>t.split(' ').includes(w));});
   if(scn&&!/\b(acend|lig|apag|deslig)/.test(t.replace(norm(scn.name),''))){await runScene(scn.id);return say(`Cena ${scn.name} ativada.`);}
+  // temperatura do ar: "colocar o ar em 22 graus"
+  const tm=t.match(/(\d{2})\s*(graus|grau|°)/);
+  if(tm){const acs=findTargets(t).filter(x=>x.dev.ac);const alvo=acs.length?acs:ch.filter(x=>x.dev.ac);
+    if(alvo.length){for(const x of alvo){if(x.c.s!=='on')await setMany([x],'on');await lgSetTemp(x.dev,+tm[1]);}
+      return say(`${alvo.map(x=>chName(x.dev,x.c.o)).join(', ')} em ${Math.max(16,Math.min(30,+tm[1]))} graus.`);}}
   // intenção
   const isOff=/\b(apag|deslig|deslique|apague)/.test(t),isOn=/\b(acend|lig|ligue|acenda)/.test(t)&&!isOff;
   const isToggle=/\b(inverter|alternar|trocar)/.test(t);
@@ -1305,7 +1451,7 @@ $('bRef').onclick=()=>{if(S.demo){toast('Modo demonstração');return;}loadDevic
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o){o.classList.remove('show');if(o.id==='ovRoom')openRoomId=null;}}));
 
 /* ---------- atualização automática ---------- */
-function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);},20000);}
+function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(!document.hidden&&(logged()||(S.lg&&S.lg.token))&&!S.demo)loadDevices(true);},20000);}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);});
 
 /* ---------- PWA (ícone e manifest embutidos) ---------- */
