@@ -249,10 +249,13 @@ body.fs .plans{display:none}
   <label>App ID (eWeLink Developer)</label>
   <input id="cAppId" autocomplete="off" placeholder="Cole o APPID aqui">
   <label>App Secret</label>
-  <input id="cSecret" type="password" autocomplete="off" placeholder="Cole o APP SECRET aqui">
+  <input id="cSecret" type="password" autocomplete="new-password" data-lpignore="true" placeholder="Cole o APP SECRET aqui">
   <label>Redirect URL</label>
   <input id="cRedir" autocomplete="off">
   <div class="hint">Cadastre exatamente esta Redirect URL no painel do eWeLink Developer. O App ID e o Secret ficam salvos só neste aparelho, não vão para o código do site.</div>
+  <label>Ponte (Cloudflare Worker)</label>
+  <div class="row"><input id="cProxy" autocomplete="off" inputmode="url" placeholder="https://casa-ponte.SEUNOME.workers.dev"><button class="btn sec" style="flex:0 0 90px;padding:0" type="button" onclick="testProxy()">Testar</button></div>
+  <div class="hint">Necessária porque o navegador bloqueia a conexão direta com o eWeLink (CORS).</div>
   <div style="margin-top:18px">
     <button class="btn" id="bLogin">Salvar e entrar com eWeLink</button>
     <button class="btn sec" id="bDemo">Usar modo demonstração</button>
@@ -400,7 +403,14 @@ async function hmac(msg){
   const sig=await crypto.subtle.sign('HMAC',k,enc.encode(msg));
   return btoa(String.fromCharCode(...new Uint8Array(sig)));
 }
-const host=()=>`https://${S.region||'us'}-apia.coolkit.cc`;
+const host=()=>S.proxy?S.proxy.replace(/\/+$/,'')+'/'+(S.region||'us'):`https://${S.region||'us'}-apia.coolkit.cc`;
+async function testProxy(){
+  const u=$('cProxy').value.trim().replace(/\/+$/,'');
+  if(!/^https:\/\//.test(u)){toast('Cole o endereço completo da ponte (começa com https://).',1);return;}
+  try{const r=await fetch(u+'/ping');const j=await r.json();
+    if(j&&j.ponte==='ok')toast('Ponte funcionando ✅');else toast('A ponte respondeu, mas não parece ser o código certo.',1);}
+  catch(_){toast('Não consegui acessar a ponte. Confira o endereço e se fez o Deploy.',1);}
+}
 const logged=()=>!!(S.at&&S.appId);
 
 /* ---------- API eWeLink v2 ---------- */
@@ -410,7 +420,7 @@ async function api(method,path,body,signed){
   h.Authorization=signed?'Sign '+await hmac(b):'Bearer '+S.at;
   let r;
   try{r=await fetch(host()+path,{method,headers:h,body:b});}
-  catch(e){throw new Error('Não consegui falar com o eWeLink. Verifique a internet. Se persistir, o navegador pode estar bloqueando a conexão direta (CORS).');}
+  catch(e){throw new Error(S.proxy?'Não consegui falar com o eWeLink pela ponte. Verifique a internet e o endereço da ponte.':'O navegador bloqueou a conexão direta com o eWeLink. Configure a Ponte em Ajustes → Conta eWeLink.');}
   const j=await r.json().catch(()=>({error:-1,msg:'Resposta inválida do servidor'}));
   if(j.error!==0){const e=new Error(j.msg||('Erro '+j.error));e.code=j.error;throw e;}
   return j.data||{};
@@ -432,6 +442,7 @@ async function call(method,path,body){
 }
 async function login(){
   if(!S.appId||!S.secret){toast('Preencha App ID e App Secret.',1);return;}
+  if(!S.proxy&&!confirm('A Ponte não está configurada. Sem ela o navegador bloqueia a conexão. Continuar mesmo assim?'))return;
   const seq=String(Date.now());
   const sign=await hmac(`${S.appId}_${seq}`);
   const p=new URLSearchParams({clientId:S.appId,seq,authorization:sign,redirectUrl:S.redirect,grantType:'authorization_code',state:nonce(),nonce:nonce(),showQRCode:'false'});
@@ -705,7 +716,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v12</div>`;
+  <div class="ver">Casa Inteligente · v13</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -1244,9 +1255,9 @@ $('bDevsSave').onclick=()=>{
 };
 
 /* ---------- configurações ---------- */
-function openCfg(){$('cAppId').value=S.appId;$('cSecret').value=S.secret;$('cRedir').value=S.redirect||defRedirect;$('bLogout').style.display=logged()?'block':'none';$('ovCfg').classList.add('show');}
+function openCfg(){$('cAppId').value=S.appId;$('cSecret').value=S.secret;$('cRedir').value=S.redirect||defRedirect;$('cProxy').value=S.proxy||'';$('bLogout').style.display=logged()?'block':'none';$('ovCfg').classList.add('show');}
 function closeCfg(){$('ovCfg').classList.remove('show');}
-function readCfg(){S.appId=$('cAppId').value.trim();S.secret=$('cSecret').value.trim();S.redirect=$('cRedir').value.trim()||defRedirect;save();}
+function readCfg(){S.appId=$('cAppId').value.trim();S.secret=$('cSecret').value.trim();S.redirect=$('cRedir').value.trim()||defRedirect;S.proxy=$('cProxy').value.trim().replace(/\/+$/,'');save();}
 function setDemo(v){S.demo=v;save();closeCfg();render();if(!v)loadDevices();}
 
 $('bLogin').onclick=()=>{readCfg();login();};
