@@ -431,7 +431,7 @@ const DEF_OPS=()=>[
   {id:'jBanho3',name:'Janela banho 03',t:'janela',x1:2.5,y1:103.3,x2:8.5,y2:103.3}
 ];
 if(!Array.isArray(S.ops))S.ops=DEF_OPS();S.opSensor=S.opSensor||{};S.geo=S.geo||null;
-S.types=S.types||{};if(!Array.isArray(S.cams))S.cams=[];if(S.startFS===undefined)S.startFS=true;S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
+S.types=S.types||{};S.notif=Object.assign({on:false,off:{}},S.notif||{});if(!Array.isArray(S.cams))S.cams=[];if(S.startFS===undefined)S.startFS=true;S.timers=S.timers||{};if(!Array.isArray(S.scenes))S.scenes=DEF_SCENES();
 // ---- várias plantas: S.rooms/S.ops apontam para a planta atual ----
 if(!Array.isArray(S.plans)||!S.plans.length)S.plans=[{id:'casa',name:'Casa',ic:'🏠',rooms:S.rooms,ops:S.ops}];
 if(!S.plans.some(p=>p.id===S.curPlan))S.curPlan=S.plans[0].id;
@@ -562,6 +562,7 @@ async function loadDevices(silent){
       return {id:it.deviceid,name:it.name||'Interruptor',online:!!it.online,multi,uiid:it.extra&&it.extra.uiid,ch};
     }).filter(x=>x.ch.length);
     setStatus('ok','Conectado · '+devices.length+' interruptor(es)');
+    notifCheck();
   }catch(e){setStatus('err','Erro de conexão');if(!silent)toast(e.message,1);}
   loading=false;$('bRef').classList.remove('spin');render();
 }
@@ -601,7 +602,7 @@ async function toggle(id,o){
   const dev=list().find(d=>d.id===id);if(!dev)return;
   if(!dev.online){toast('Interruptor offline.',1);return;}
   const c=dev.ch.find(x=>x.o===o);const nv=c.s==='on'?'off':'on';
-  c.s=nv;c.busy=true;render();
+  c.s=nv;c.busy=true;mine[dev.id+':'+o]=Date.now();render();
   if(navigator.vibrate)navigator.vibrate(15);
   if(S.demo){c.busy=false;render();return;}
   try{
@@ -616,7 +617,7 @@ async function setMany(items,state){
   items.filter(x=>x.dev.online&&x.c.s!==state).forEach(x=>{(by[x.dev.id]=by[x.dev.id]||{dev:x.dev,cs:[]}).cs.push(x.c);});
   const groups=Object.values(by);let n=0;
   for(const g of groups){
-    g.cs.forEach(c=>c.s=state);n+=g.cs.length;
+    g.cs.forEach(c=>{c.s=state;mine[g.dev.id+':'+c.o]=Date.now();});n+=g.cs.length;
     if(!S.demo){
       try{if(g.dev.kind==='lg')await lgPower(g.dev,state);else await call('POST','/v2/device/thing/status',{type:1,id:g.dev.id,params:g.dev.multi?{switches:g.cs.map(c=>({switch:state,outlet:c.o}))}:{switch:state}});}
       catch(e){g.cs.forEach(c=>c.s=state==='on'?'off':'on');toast(e.message,1);}
@@ -823,6 +824,10 @@ function renderSettings(){
     ${S.plans.map(p=>srow(esc(p.ic||'🏠'),esc(p.name)+(p.id===S.curPlan?' <small style="display:inline;color:var(--acc)">· atual</small>':''),`${p.rooms.length} cômodo(s) · toque para editar`,`editPlanFromSettings('${esc(p.id)}')`)).join('')}
     ${srow('＋','Nova planta','Outro andar, casa de praia, sítio…','newPlan()')}
   </div>
+  <div class="sgrp">Notificações</div><div class="slist">
+    ${srow('🔔','Avisar quando algo for acionado','Luzes, aparelhos e portas ligados/abertos fora deste app','',sw('swNotif',S.notif.on,'setNotif(this.checked)'))}
+    ${S.notif.on?srow('☑️','Escolher o que avisar',`${Object.keys(S.notif.off).length?Object.keys(S.notif.off).length+' desligado(s)':'Todos os aparelhos'}`,'openNotifSel()')+srow('📨','Enviar notificação de teste','','testNotif()'):''}
+  </div>
   <div class="sgrp">Voz e painel</div><div class="slist">
     ${srow('🎤','Ativar com "OK Casa"','Escuta contínua com o app aberto','',sw('swWake',S.wake,'setWake(this.checked)'))}
     ${srow('🔊','Responder em voz alta','O app fala o resultado do comando','',sw('swSpeak',S.voiceSpeak,'S.voiceSpeak=this.checked;save()'))}
@@ -839,7 +844,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v19</div>`;
+  <div class="ver">Casa Inteligente · v20</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -1203,6 +1208,66 @@ function applyInvite(){
   $('ovGotInv').classList.add('show');
 }
 
+/* ---------- notificações ---------- */
+const mine={};            // comandos feitos por este app (não notificar)
+let prevSt=null;          // último estado conhecido
+function curStates(){
+  const m={};
+  allCh().forEach(x=>{if(x.dev.online)m[x.key]={s:x.c.s,x};});
+  S.ops.forEach(o=>{const st=opState(o);if(st)m['op:'+o.id]={s:st,o};});
+  return m;
+}
+function notifText(v){
+  if(v.o){const f=v.o.t!=='portao',ab=v.s==='open',ic={porta:'🚪',janela:'🪟',portao:'🚧'}[v.o.t]||'🚪';
+    return `${ic} ${v.o.name} ${ab?(f?'aberta':'aberto'):(f?'fechada':'fechado')}`;}
+  const x=v.x,t=chType(x),ic={luz:'💡',tomada:'🔌',ventilador:'🌀',bomba:'💧',ar:'❄️',portao:'🚧',outro:'⚡'}[t]||'⚡';
+  return `${ic} ${chName(x.dev,x.c.o)}: ${TYPES[t][v.s==='on'?1:2].toLowerCase()}`;
+}
+async function notify(title,body,tag){
+  try{
+    if(S.notif.on&&'Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){await reg.showNotification(title,{body,tag,renotify:true,icon:'icon-192.png',badge:'icon-192.png',vibrate:[120,60,120],data:{url:location.pathname}});return;}
+    }
+  }catch(_){}
+  toast(title+(body?' · '+body:''));
+}
+function notifCheck(){
+  const cur=curStates();
+  if(prevSt&&S.notif.on){
+    const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    for(const k in cur){
+      const p=prevSt[k];if(!p||p.s===cur[k].s)continue;
+      if(S.notif.off[k])continue;
+      if(Date.now()-(mine[k]||0)<45000)continue; // foi este app que mandou
+      notify(notifText(cur[k]),'Às '+hora+' · pelo interruptor ou outro aparelho',k);
+    }
+  }
+  prevSt=cur;
+}
+async function setNotif(on){
+  if(on){
+    if(!('Notification' in window)){toast('Este navegador não suporta notificações.',1);S.notif.on=false;render();return;}
+    let perm=Notification.permission;
+    if(perm==='default')perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast('Permita as notificações do app nas configurações do Android (Apps → Casa → Notificações).',1);S.notif.on=false;save();render();return;}
+  }
+  S.notif.on=on;save();render();
+  if(on){toast('🔔 Notificações ligadas');startTimer();}
+}
+function openNotifSel(){
+  const ch=allCh();
+  const rows=ch.map(x=>[x.key,chName(x.dev,x.c.o),TYPES[chType(x)][0]]).concat(S.ops.filter(o=>S.opSensor[o.id]).map(o=>['op:'+o.id,o.name,'Sensor de abertura']));
+  $('aTitle').textContent='🔔 Avisar sobre…';
+  $('aBody').innerHTML=rows.length?rows.map(([k,n,t])=>`<label class="chk"><input type="checkbox" data-nk="${esc(k)}" ${S.notif.off[k]?'':'checked'}><span>${esc(n)}<small>${esc(t)}</small></span></label>`).join(''):'<div class="empty">Nenhum aparelho carregado ainda.</div>';
+  $('bAssignSave').onclick=()=>{document.querySelectorAll('[data-nk]').forEach(i=>{if(i.checked)delete S.notif.off[i.dataset.nk];else S.notif.off[i.dataset.nk]=1;});save();$('ovAssign').classList.remove('show');restoreAssign();render();toast('Salvo ✅');};
+  $('ovAssign').classList.add('show');
+}
+async function testNotif(){
+  if(!S.notif.on){toast('Ligue as notificações primeiro.',1);return;}
+  await notify('🔔 Teste do Casa Inteligente','As notificações estão funcionando.','teste');
+}
+
 /* ---------- câmeras (atalho para o iSIC Lite) ---------- */
 const ISIC_PKG='com.intelbras.isiclite';
 function openIsic(camId){
@@ -1269,6 +1334,7 @@ async function loadLG(silent,force){
       out.push({id:'lg:'+id,lgId:id,kind:'lg',name:(d.deviceInfo||{}).alias||'Ar-condicionado',online,multi:false,ch:[{o:0,s:ac.power?'on':'off'}],ac});
     }
     lgDevs=out;
+    notifCheck();
   }catch(e){if(!silent)toast('LG: '+e.message,1);}
   lgBusy=false;render();
 }
@@ -1562,7 +1628,7 @@ function delRoom(){
   for(const k in S.chRoom)if(S.chRoom[k]===selRoom)S.chRoom[k]=null;
   selRoom=null;save();render();
 }
-function openAssign(){
+function openAssign(){restoreAssign();
   const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;
   $('aTitle').textContent='💡 Luzes · '+r.name;
   const ch=allCh();
@@ -1572,7 +1638,8 @@ function openAssign(){
   }).join(''):`<div class="empty">Nenhum interruptor carregado ainda.</div>`;
   $('ovAssign').classList.add('show');
 }
-$('bAssignSave').onclick=()=>{
+function restoreAssign(){$('bAssignSave').onclick=assignSave;}
+const assignSave=$('bAssignSave').onclick=()=>{
   document.querySelectorAll('#aBody input').forEach(i=>{
     const k=i.dataset.k;const [dev,o]=[list().find(d=>k.startsWith(d.id+':')),+k.split(':').pop()];
     const cur=dev?chRoom(dev,o):null;
@@ -1619,7 +1686,7 @@ $('bRef').onclick=()=>{if(S.demo){toast('Modo demonstração');return;}loadDevic
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o){o.classList.remove('show');if(o.id==='ovRoom')openRoomId=null;}}));
 
 /* ---------- atualização automática ---------- */
-function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(!document.hidden&&(logged()||(S.lg&&S.lg.token))&&!S.demo)loadDevices(true);},20000);}
+function startTimer(){clearInterval(timer);timer=setInterval(()=>{if((!document.hidden||S.notif.on)&&(logged()||(S.lg&&S.lg.token))&&!S.demo)loadDevices(true);},20000);}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&!S.demo)loadDevices(true);});
 
 /* ---------- PWA (ícone e manifest embutidos) ---------- */
