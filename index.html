@@ -45,7 +45,30 @@ header h1{font-size:20px;margin:0;flex:1}
 body.fs header,body.fs .st,body.fs .tabs,body.fs .bnav,body.fs .scenes,body.fs #pHint,body.fs #eTools,body.fs #unassigned,body.fs .bar{display:none!important}
 body.fs{overflow:hidden}
 body.fs .planWrap{position:fixed;inset:0;z-index:15;border:none;border-radius:0;background:var(--bg);padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
-body.fs #plan{width:100%;flex:1;min-height:0;height:auto;max-height:none}
+body.fs #plan{width:100%;height:100%;max-height:none}
+/* páginas por cômodo na tela cheia */
+.pgr,.pdots{display:none}
+body.fs #pager{display:flex;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+body.fs #pager::-webkit-scrollbar{display:none}
+body.fs .pg{flex:0 0 100%;min-width:100%;scroll-snap-align:start;scroll-snap-stop:always;height:100%;display:flex;flex-direction:column}
+body.fs .pg0{align-items:center;justify-content:center}
+body.fs .pgr{display:flex;overflow-y:auto;padding:4px 6px 8px}
+.pgr .ph{display:flex;align-items:baseline;justify-content:space-between;margin:4px 2px 12px}
+.pgr .ph h2{margin:0;font-size:26px}.pgr .ph small{color:var(--mut);font-size:13px}
+.pgr .grid{grid-template-columns:repeat(2,1fr);gap:12px}
+.pgr .tile{min-height:140px;padding:16px}
+.pgr .tile svg{width:40px;height:40px}
+.pgr .tile .n{font-size:16px}.pgr .tile .s{font-size:13px}
+.pgr .row{margin-top:14px}
+.pgr .camt{background:#10233a;border-color:#1e4a6e}
+.pgr .camt svg{stroke:#7dd3fc}
+body.fs .pdots{display:flex;justify-content:center;gap:6px;padding:4px 0 2px;flex-wrap:wrap}
+.pdots i{width:7px;height:7px;border-radius:50%;background:#3a4870;transition:.2s;cursor:pointer}
+.pdots i.on{background:var(--txt);width:18px;border-radius:4px}
+.pdots i.lit{background:var(--on)}
+.pdots i.on.lit{background:var(--on)}
+.swipeHint{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(20,28,47,.85);border:1px solid var(--line);color:var(--mut);border-radius:12px;padding:8px 10px;font-size:12px;pointer-events:none;animation:nudge 1.6s ease-in-out 3}
+@keyframes nudge{50%{transform:translate(-8px,-50%)}}
 .wall{display:none}
 body.fs .wall{display:flex}
 #wallTop{align-items:center;justify-content:space-between;padding:4px 62px 4px 8px}
@@ -690,12 +713,14 @@ function buildMain(){
   if(S.view==='plan'){
     m.innerHTML=tabs+sc+`<div class="sum" id="sum"></div><div class="planWrap"><button class="fsx" onclick="toggleFS()" title="Sair da tela cheia">✕</button><button class="fsoff" onclick="allOff()" title="Apagar tudo">🌙</button><button class="fsmic" onclick="openVoice(true)" title="Comando de voz">🎤</button><div class="wkfs" id="wkfs"></div>
       <div class="wall" id="wallTop"><div><div id="wClock">--:--</div><div id="wDate"></div></div><div id="wWeather"></div></div>
-      <svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="pager"><div class="pg pg0"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
+      <div class="pdots" id="pdots"></div>
       <div class="wall wsc" id="wallScenes"></div>
       <div class="legend"><span><i style="border-color:#a3b3d6"></i>Porta</span><span><i style="border-color:#7dd3fc;border-top-style:dashed"></i>Janela</span><span><i style="border-color:#c4b5fd"></i>Portão</span><span><i style="border-color:#ef4444"></i>Aberto</span></div>
       <div class="planHint" id="pHint"></div>
       <div class="etools" id="eTools"></div></div><div id="unassigned"></div>`;
     const svg=$('plan');
+    $('pager').addEventListener('scroll',onPagerScroll,{passive:true});
     svg.addEventListener('pointerdown',pDown);
     svg.addEventListener('pointermove',pMove);
     svg.addEventListener('pointerup',pUp);
@@ -713,6 +738,44 @@ function buildMain(){
 function setView(v){if(document.body.classList.contains('fs'))toggleFS();S.view=v;editPlan=false;selRoom=null;selOp=null;save();render();scrollTo(0,0);}
 
 function planH(){return Math.max(40,...S.rooms.map(r=>r.y+r.h));}
+/* ---------- páginas dos cômodos (tela cheia, deslizar) ---------- */
+function pageRooms(){
+  return [...S.rooms].filter(r=>lightsOf(r.id).length||S.cams.some(c=>c.room===r.id)).sort((a,b)=>(a.y-b.y)||(a.x-b.x));
+}
+function camTile(c){return `<div class="tile camt" role="button" onclick="openIsic('${esc(c.id)}')">${icon('camera')}<div><div class="n">${esc(c.name)}</div><div class="s">Abrir no iSIC Lite</div></div></div>`;}
+function renderPages(){
+  const pg=$('pager');if(!pg)return;
+  const rooms=document.body.classList.contains('fs')?pageRooms():[];
+  // remove páginas que sobraram
+  [...pg.querySelectorAll('.pgr')].forEach((el,i)=>{if(i>=rooms.length)el.remove();});
+  rooms.forEach((r,i)=>{
+    let el=pg.querySelectorAll('.pgr')[i];
+    if(!el){el=document.createElement('div');el.className='pg pgr';pg.appendChild(el);}
+    const ls=lightsOf(r.id),cams=S.cams.filter(c=>c.room===r.id),on=ls.filter(x=>x.c.s==='on').length;
+    el.dataset.room=r.id;
+    el.innerHTML=`<div class="ph"><h2>${esc(r.name)}</h2><small>${ls.length?(on?on+' ligado(s)':'tudo desligado'):''}</small></div>
+      <div class="grid">${ls.map(tile).join('')}${cams.map(camTile).join('')}</div>
+      ${ls.length>1?`<div class="row"><button class="btn sec" onclick="setMany(lightsOf('${esc(r.id)}'),'on')">⚡ Ligar tudo</button><button class="btn sec" onclick="setMany(lightsOf('${esc(r.id)}'),'off')">🌙 Desligar tudo</button></div>`:''}`;
+  });
+  renderDots();
+}
+function curPage(){const pg=$('pager');return pg&&pg.clientWidth?Math.round(pg.scrollLeft/pg.clientWidth):0;}
+function renderDots(){
+  const d=$('pdots'),pg=$('pager');if(!d||!pg)return;
+  const pages=[...pg.querySelectorAll('.pgr')];
+  if(!document.body.classList.contains('fs')||!pages.length){d.innerHTML='';return;}
+  const cur=curPage();
+  d.innerHTML=`<i class="${cur===0?'on':''}" title="Planta" onclick="goPage(0)"></i>`+pages.map((p,i)=>{const lit=lightsOf(p.dataset.room).some(x=>x.c.s==='on');return `<i class="${cur===i+1?'on':''}${lit?' lit':''}" onclick="goPage(${i+1})"></i>`;}).join('');
+  const hint=pg.querySelector('.swipeHint');
+  if(cur===0&&!S.swipeSeen){if(!hint)pg.querySelector('.pg0').insertAdjacentHTML('beforeend','<div class="swipeHint">deslize ← para ver os cômodos</div>');}
+  else if(hint)hint.remove();
+}
+function goPage(i){const pg=$('pager');if(pg)pg.scrollTo({left:i*pg.clientWidth,behavior:'smooth'});}
+let pageScrollT=null;
+function onPagerScroll(){
+  clearTimeout(pageScrollT);
+  pageScrollT=setTimeout(()=>{if(curPage()>0&&!S.swipeSeen){S.swipeSeen=true;save();}renderDots();},80);
+}
 function renderPlan(){
   const svg=$('plan');if(!svg)return;
   const H=planH();
@@ -770,7 +833,7 @@ function renderPlan(){
     return `<line class="op ${o.t}${st==='open'?' open':''}${st?' lnk':''}" x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}"><title>${esc(o.name)}</title></line>`+
       (ed?`<line class="ophit${sel?' sel':''}" data-op="${esc(o.id)}" x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}"/>`:'')+
       (sel?`<circle class="oh" data-oh="1" data-op="${esc(o.id)}" cx="${o.x1}" cy="${o.y1}" r="2"/><circle class="oh" data-oh="2" data-op="${esc(o.id)}" cx="${o.x2}" cy="${o.y2}" r="2"/>`:'');}).join('');
-  renderSummary();renderWall();
+  renderSummary();renderWall();renderPages();
   const so=S.ops.find(o=>o.id===selOp);
   $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona, ⬆⬇ escolhe quem fica por cima':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no ícone para ligar/desligar · segure o ícone para timer · segure o cômodo para detalhes';
   const t=$('eTools');
@@ -853,7 +916,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v21</div>`;
+  <div class="ver">Casa Inteligente · v22</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -1596,7 +1659,7 @@ async function toggleFS(){
     if(on){renderWall();loadWeather(true);}
     if(on){if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen();
       if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen');}
-    else{if(document.fullscreenElement)await document.exitFullscreen();if(wakeLock){wakeLock.release();wakeLock=null;}}
+    else{if(document.fullscreenElement)await document.exitFullscreen();if(wakeLock){wakeLock.release();wakeLock=null;}const pg=$('pager');if(pg)pg.scrollLeft=0;}
   }catch(_){}
   renderPlan();
 }
