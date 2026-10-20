@@ -331,6 +331,15 @@ body.fs .plans{display:none}
   <div style="margin-top:12px"><button class="btn sec" onclick="addCam()">＋ Adicionar câmera</button><button class="btn" onclick="saveCams()">Salvar</button></div>
 </div></div>
 
+<!-- Medidas do cômodo -->
+<div class="ov" id="ovDim"><div class="sheet">
+  <div class="sh"><h3 id="dimTitle">📐 Medidas</h3><button class="x" onclick="$('ovDim').classList.remove('show')">✕</button></div>
+  <div class="hint">A planta tem <b>100 de largura</b>. Use os mesmos números de outro cômodo para alinhar certinho. Ex.: se a Sala começa em 56 e o Corredor tem 9 de largura, o Quarto Casal começa em 65.</div>
+  <div class="row"><div><label>Esquerda (X)</label><input id="dX" inputmode="decimal"></div><div><label>Topo (Y)</label><input id="dY" inputmode="decimal"></div></div>
+  <div class="row"><div><label>Largura</label><input id="dW" inputmode="decimal"></div><div><label>Altura</label><input id="dH" inputmode="decimal"></div></div>
+  <div style="margin-top:14px"><button class="btn" onclick="saveDim()">Salvar</button></div>
+</div></div>
+
 <!-- Voz -->
 <div class="ov" id="ovVoice"><div class="sheet">
   <div class="sh"><h3>🎤 Comando de voz</h3><button class="x" onclick="closeVoice()">✕</button></div>
@@ -763,7 +772,7 @@ function renderPlan(){
       (sel?`<circle class="oh" data-oh="1" data-op="${esc(o.id)}" cx="${o.x1}" cy="${o.y1}" r="2"/><circle class="oh" data-oh="2" data-op="${esc(o.id)}" cx="${o.x2}" cy="${o.y2}" r="2"/>`:'');}).join('');
   renderSummary();renderWall();
   const so=S.ops.find(o=>o.id===selOp);
-  $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no ícone para ligar/desligar · segure o ícone para timer · segure o cômodo para detalhes';
+  $('pHint').textContent=editPlan&&editMode==='ops'?(so?'Selecionado: '+so.name+' · arraste para mover, bolinhas brancas mudam o tamanho':'Toque em uma porta, janela ou portão para selecionar'):editPlan?(selRoom?'Selecionado: '+(S.rooms.find(r=>r.id===selRoom)||{}).name+' · arraste para mover, bolinha azul redimensiona, ⬆⬇ escolhe quem fica por cima':'Toque em um cômodo para selecionar (role a tela normalmente)'):'Toque no ícone para ligar/desligar · segure o ícone para timer · segure o cômodo para detalhes';
   const t=$('eTools');
   t.classList.toggle('fix',editPlan);document.body.classList.toggle('editing',editPlan);
   if(editPlan){
@@ -772,7 +781,7 @@ function renderPlan(){
       t.innerHTML=modes+`<button onclick="addOp('porta')">＋ Porta</button><button onclick="addOp('janela')">＋ Janela</button><button onclick="addOp('portao')">＋ Portão</button><button ${d} onclick="renameOp()">✏️ Nome</button><button ${d} onclick="rotateOp()">↻ Girar</button><button class="dan" ${d} onclick="delOp()">🗑 Excluir</button><button onclick="openOps()">🔗 Sensores</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
     }else{
     const d=selRoom?'':'disabled';
-    t.innerHTML=modes+`<button onclick="renamePlan()">📝 Planta</button>${S.plans.length>1?'<button class="dan" onclick="delPlan()">🗑 Planta</button>':''}<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
+    t.innerHTML=modes+`<button onclick="renamePlan()">📝 Planta</button>${S.plans.length>1?'<button class="dan" onclick="delPlan()">🗑 Planta</button>':''}<button onclick="addRoom()">＋ Cômodo</button><button ${d} onclick="renameRoom()">✏️ Nome</button><button ${d} onclick="openAssign()">💡 Luzes</button><button ${d} onclick="openDim()">📐 Medidas</button><button ${d} onclick="layerRoom(1)">⬆ Frente</button><button ${d} onclick="layerRoom(-1)">⬇ Atrás</button><button class="dan" ${d} onclick="delRoom()">🗑 Excluir</button><button class="pri" onclick="toggleEdit()">✔ Concluir</button>`;
     }
   }else t.innerHTML=`<button onclick="allOff()">🌙 Apagar</button><button onclick="openIsic()">📹 Câmeras</button><button onclick="toggleFS()">⛶ Tela cheia</button><button onclick="toggleEdit()">✏️ Editar</button>`;
   // luzes sem cômodo
@@ -844,7 +853,7 @@ function renderSettings(){
     ${srow('📂','Importar backup','Restaura a partir de um arquivo',"$('fImport').click()")}
     ${srow('↺','Restaurar planta atual','Volta "'+esc(curPlan().name)+'" ao modelo padrão','resetPlan()','','dan')}
   </div>
-  <div class="ver">Casa Inteligente · v20</div>`;
+  <div class="ver">Casa Inteligente · v21</div>`;
 }
 function editPlanFromSettings(id){syncPlan();S.curPlan=id;loadPlan();S.view='plan';editPlan=true;editMode='rooms';selRoom=null;save();render();scrollTo(0,0);}
 function resetPlan(){if(!confirm(`Voltar a planta "${curPlan().name}" para o modelo padrão?`))return;if(curPlan().id==='casa'){S.rooms=DEF_ROOMS();S.ops=DEF_OPS();}else{S.rooms=blankRooms();S.ops=[];}save();render();toast('Planta restaurada');}
@@ -879,7 +888,7 @@ async function roomAll(st){await setMany(lightsOf(openRoomId),st);}
 /* ---------- edição da planta ---------- */
 function toggleEdit(){if(document.body.classList.contains('fs'))toggleFS();editPlan=!editPlan;selRoom=null;selOp=null;save();render();}
 function svgPt(e){const svg=$('plan');const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
-const snap=v=>Math.round(v/2)*2;
+const snap=v=>Math.round(v);
 // Edição: tocar seleciona (a tela continua rolando); só arrasta o cômodo já selecionado
 let tapId=null;
 let press=null;
@@ -1619,6 +1628,27 @@ function addRoom(){
   const id='r'+Date.now().toString(36);
   S.rooms.push({id,name:name.trim(),x:0,y:snap(planH()),w:40,h:24});
   selRoom=id;save();renderPlan();
+}
+// camadas: quem fica por cima (útil para cômodos em "L")
+function layerRoom(dir){
+  const i=S.rooms.findIndex(x=>x.id===selRoom);if(i<0)return;
+  const [r]=S.rooms.splice(i,1);
+  if(dir>0)S.rooms.push(r);else S.rooms.unshift(r);
+  save();renderPlan();toast(dir>0?'⬆ '+r.name+' fica por cima':'⬇ '+r.name+' fica por baixo');
+}
+function openDim(){
+  const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;
+  $('dimTitle').textContent='📐 '+r.name;
+  [['dX','x'],['dY','y'],['dW','w'],['dH','h']].forEach(([id,k])=>$(id).value=Math.round(r[k]*10)/10);
+  $('ovDim').classList.add('show');
+}
+function saveDim(){
+  const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;
+  const v=id=>parseFloat(String($(id).value).replace(',','.'));
+  const x=v('dX'),y=v('dY'),w=v('dW'),hh=v('dH');
+  if([x,y,w,hh].some(n=>isNaN(n))||w<3||hh<3){toast('Confira os números.',1);return;}
+  Object.assign(r,{x:Math.max(0,Math.min(97,x)),y:Math.max(0,y),w:Math.min(100-Math.max(0,x),w),h:hh});
+  save();$('ovDim').classList.remove('show');renderPlan();toast('Medidas salvas ✅');
 }
 function renameRoom(){const r=S.rooms.find(x=>x.id===selRoom);if(!r)return;const n=prompt('Nome do cômodo:',r.name);if(n&&n.trim()){r.name=n.trim();save();renderPlan();}}
 function delRoom(){
